@@ -33,15 +33,15 @@ var StringToToken map[string]TokenType = map[string]TokenType{
 	"Obj":    TOKEN_OBJ,
 }
 
-type Loc struct {
-	Start  int
-	Length int
+type Location struct {
+	FilePos int
+	Length  int
 }
 
 type Token struct {
 	Type  TokenType
 	Value string
-	Loc   Loc
+	Loc   Location
 }
 
 type Lexer struct {
@@ -66,6 +66,7 @@ func (l *Lexer) Lex() ([]Token, error) {
 
 		if isWhiteSpace(*currChar) {
 			l.eatWhile(isWhiteSpace)
+			l.startPos = l.currPos
 			continue
 		}
 
@@ -94,6 +95,12 @@ func (l *Lexer) Lex() ([]Token, error) {
 				l.acceptToken(TOKEN_LIST)
 				continue
 			}
+		case '"':
+			err := l.lexLiteral()
+			if err != nil {
+				return nil, err
+			}
+			continue
 		default:
 		}
 
@@ -105,6 +112,19 @@ func (l *Lexer) Lex() ([]Token, error) {
 		return nil, fmt.Errorf("Unexpected char %s at %d", string(*currChar), l.currPos)
 	}
 	return l.tokens, nil
+}
+
+func (l *Lexer) lexLiteral() error {
+	l.eatWhile(func(b byte) bool {
+		return b != '"'
+	})
+	next := l.next()
+	if next == nil {
+		return fmt.Errorf("Unexpected EOF, expected '\"' at %d", l.currPos)
+	}
+	str := l.currString()
+	l.acceptTokenWithValue(TOKEN_LITERAL, str[1:len(str)-1])
+	return nil
 }
 
 func (l *Lexer) lexWhitespace() {
@@ -133,9 +153,9 @@ func (l *Lexer) acceptTokenWithValue(tokenType TokenType, value string) {
 	token := Token{
 		Type:  tokenType,
 		Value: value,
-		Loc: Loc{
-			Start:  start,
-			Length: length,
+		Loc: Location{
+			FilePos: start,
+			Length:  length,
 		},
 	}
 	l.tokens = append(l.tokens, token)
@@ -144,11 +164,11 @@ func (l *Lexer) acceptTokenWithValue(tokenType TokenType, value string) {
 
 func (l *Lexer) next() *byte {
 	if l.currPos >= len(l.input) {
-    l.currPos++
+		l.currPos++
 		return nil
 	}
 	char := l.input[l.currPos]
-  l.currPos++
+	l.currPos++
 	return &char
 }
 
@@ -159,7 +179,7 @@ func (l *Lexer) backup() {
 }
 
 func (l *Lexer) currString() string {
-	return l.input[l.startPos : l.currPos]
+	return l.input[l.startPos:l.currPos]
 }
 
 func (l *Lexer) eatWhile(fn func(byte) bool) {

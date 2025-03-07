@@ -1,0 +1,27 @@
+prod User {
+  name Str,
+  age? Num,
+  gender? Str,
+  friendIds? Str[],
+  Status,
+  Data,
+}
+
+strsum Status {
+  "NOT_HERE",
+  "REALLY",
+}
+
+sum Data {
+  AdminData,
+  UserData,
+}
+
+prod AdminData {
+  level Num,
+}
+
+prod UserData {
+  id Num,
+  data Obj,
+}
