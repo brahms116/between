@@ -24,7 +24,7 @@ const (
 	TOKEN_OPTIONAL
 )
 
-var StringToToken map[string]TokenType = map[string]TokenType{
+var stringToToken map[string]TokenType = map[string]TokenType{
 	"prod":   TOKEN_PRODUCT,
 	"sum":    TOKEN_SUM,
 	"strsum": TOKEN_STR_SUM,
@@ -44,7 +44,7 @@ type Token struct {
 	Loc   Location
 }
 
-type Lexer struct {
+type lexer struct {
 	input    string
 	startPos int
 	currPos  int
@@ -52,11 +52,11 @@ type Lexer struct {
 }
 
 func Lex(input string) ([]Token, error) {
-	lexer := &Lexer{input: input}
+	lexer := &lexer{input: input}
 	return lexer.Lex()
 }
 
-func (l *Lexer) Lex() ([]Token, error) {
+func (l *lexer) Lex() ([]Token, error) {
 
 	for {
 		currChar := l.next()
@@ -114,7 +114,7 @@ func (l *Lexer) Lex() ([]Token, error) {
 	return l.tokens, nil
 }
 
-func (l *Lexer) lexLiteral() error {
+func (l *lexer) lexLiteral() error {
 	l.eatWhile(func(b byte) bool {
 		return b != '"'
 	})
@@ -127,15 +127,15 @@ func (l *Lexer) lexLiteral() error {
 	return nil
 }
 
-func (l *Lexer) lexWhitespace() {
+func (l *lexer) lexWhitespace() {
 	l.eatWhile(isWhiteSpace)
 }
 
-func (l *Lexer) lexAlphaNum() {
+func (l *lexer) lexAlphaNum() {
 	l.eatWhile(isAlphaNum)
 	str := l.currString()
 
-	token, ok := StringToToken[str]
+	token, ok := stringToToken[str]
 	if ok {
 		l.acceptToken(token)
 		return
@@ -143,11 +143,11 @@ func (l *Lexer) lexAlphaNum() {
 	l.acceptTokenWithValue(TOKEN_ID, str)
 }
 
-func (l *Lexer) acceptToken(tokenType TokenType) {
+func (l *lexer) acceptToken(tokenType TokenType) {
 	l.acceptTokenWithValue(tokenType, "")
 }
 
-func (l *Lexer) acceptTokenWithValue(tokenType TokenType, value string) {
+func (l *lexer) acceptTokenWithValue(tokenType TokenType, value string) {
 	length := l.currPos - l.startPos
 	start := l.startPos
 	token := Token{
@@ -162,7 +162,7 @@ func (l *Lexer) acceptTokenWithValue(tokenType TokenType, value string) {
 	l.startPos = l.currPos
 }
 
-func (l *Lexer) next() *byte {
+func (l *lexer) next() *byte {
 	if l.currPos >= len(l.input) {
 		l.currPos++
 		return nil
@@ -172,17 +172,17 @@ func (l *Lexer) next() *byte {
 	return &char
 }
 
-func (l *Lexer) backup() {
+func (l *lexer) backup() {
 	if l.currPos > l.startPos {
 		l.currPos--
 	}
 }
 
-func (l *Lexer) currString() string {
+func (l *lexer) currString() string {
 	return l.input[l.startPos:l.currPos]
 }
 
-func (l *Lexer) eatWhile(fn func(byte) bool) {
+func (l *lexer) eatWhile(fn func(byte) bool) {
 	for {
 		next := l.next()
 		if next == nil {
