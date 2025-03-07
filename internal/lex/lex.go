@@ -27,7 +27,7 @@ const (
 var stringToToken map[string]TokenType = map[string]TokenType{
 	"prod":   TOKEN_PRODUCT,
 	"sum":    TOKEN_SUM,
-	"strsum": TOKEN_STR_SUM,
+	"sumstr": TOKEN_STR_SUM,
 	"Str":    TOKEN_STR,
 	"Num":    TOKEN_STR_SUM,
 	"Obj":    TOKEN_OBJ,

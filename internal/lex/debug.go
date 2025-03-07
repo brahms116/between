@@ -5,7 +5,7 @@ import "fmt"
 var TokenTypeDisplay map[TokenType]string = map[TokenType]string{
 	TOKEN_PRODUCT:   "TOKEN_PRODUCT",
 	TOKEN_SUM:       "TOKEN_SUM",
-	TOKEN_STR_SUM:   "TOKEN_STR_SUM",
+	TOKEN_SUM_STR:   "TOKEN_SUM_STR",
 	TOKEN_ID:        "TOKEN_ID",
 	TOKEN_LITERAL:   "TOKEN_LITERAL",
 	TOKEN_LBRACE:    "TOKEN_LBRACE",

@@ -1,13 +1,13 @@
 prod User {
   name Str,
-  age? Num,
-  gender? Str,
-  friendIds? Str[],
+  age Num?,
+  gender Str?,
+  friendIds Str?[]?,
   Status,
   Data,
 }
 
-strsum Status {
+sumstr Status {
   "NOT_HERE",
   "REALLY",
 }
