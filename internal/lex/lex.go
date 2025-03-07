@@ -9,7 +9,7 @@ type TokenType int
 const (
 	TOKEN_PRODUCT TokenType = iota
 	TOKEN_SUM
-	TOKEN_STR_SUM
+	TOKEN_SUM_STR
 	TOKEN_ID
 	TOKEN_LITERAL
 	TOKEN_LBRACE
@@ -27,9 +27,9 @@ const (
 var stringToToken map[string]TokenType = map[string]TokenType{
 	"prod":   TOKEN_PRODUCT,
 	"sum":    TOKEN_SUM,
-	"sumstr": TOKEN_STR_SUM,
+	"sumstr": TOKEN_SUM_STR,
 	"Str":    TOKEN_STR,
-	"Num":    TOKEN_STR_SUM,
+	"Num":    TOKEN_NUM,
 	"Obj":    TOKEN_OBJ,
 }
 
