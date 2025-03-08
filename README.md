@@ -2,7 +2,7 @@
 
 A small language to describe DTOs and sync them between languages.
 
-> [!NOTE]  
+> [!WARNING]  
 > Very early prototype, many and all things subject to change as well as many feature gaps
 
 ## Example
@@ -77,14 +77,14 @@ type User struct {
 }
 type Status string
 
-const Status_Active = "Active"
-const Status_Disabled = "Disabled"
-const Status_Pending = "Pending"
+const Status_Active Status = "Active"
+const Status_Disabled Status = "Disabled"
+const Status_Pending Status = "Pending"
 
 type UserData_Type string
 
-const UserData_Type_adminData = "adminData"
-const UserData_Type_customerData = "customerData"
+const UserData_Type_adminData UserData_Type = "adminData"
+const UserData_Type_customerData UserData_Type = "customerData"
 
 type UserData struct {
 	Type         UserData_Type `json:"_type"`

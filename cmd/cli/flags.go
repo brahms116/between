@@ -14,9 +14,9 @@ type flags struct {
 func newFlags() (flags, error) {
 	f := flags{}
 
-	flag.StringVar(&f.inputFileLocation, "input", "", "path to the input file")
-	flag.StringVar(&f.outputFileLocation, "output", "", "path to the output file")
-	flag.StringVar(&f.goPackageName, "go-package-name", "", "package name for the generated go file, defaults to the name of the input file")
+	flag.StringVar(&f.inputFileLocation, "input", "", "path to the input file: e.g. ./input.bt")
+	flag.StringVar(&f.outputFileLocation, "output", "", "path to the output file: e.g. ./output.go")
+	flag.StringVar(&f.goPackageName, "go-package-name", "", "used when output is a golang file, specifies the package name for the generated go file, defaults to the name of the output file, e.g. mypackage.go will be mypackage")
 	flag.Parse()
 
 	if f.outputFileLocation == "" {

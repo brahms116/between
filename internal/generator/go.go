@@ -48,7 +48,7 @@ func printGoSumStr(s ast.SumStr) string {
 	for _, variant := range s.Variants {
 		// Variants can't be optional, yet?
 		variantName := s.Id + "_" + variant
-		variantsString += fmt.Sprintf(`const %s = "%s";`, variantName, variant)
+		variantsString += fmt.Sprintf(`const %s %s = "%s";`, variantName, s.Id, variant)
 	}
 	return typeDec + variantsString
 }
