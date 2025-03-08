@@ -1,0 +1,30 @@
+PROD
+SUM_STR
+SUM
+ID(value)
+LITERAL(value)
+BRACES
+LIST
+SEPARATOR
+OPTIONAL
+
+definitions -> definition definitions | $
+definition -> product | sum | strsum
+
+type -> typeList | typeIdent
+typeList -> LIST nullability type
+typeIdent -> ID nullability
+
+nullability -> OPTIONAL | e
+
+fields -> field fields | e
+field -> ID fieldTail
+fieldTail -> nullability SEPARATOR | type SEPARATOR
+
+sum -> SUM ID LBRACE fields RBRACE
+
+product -> PROD ID LBRACE fields RBRACE
+
+sumStr -> SUM_STR ID LBRACE sumStrVariants RBRACE
+sumStrVariants -> sumStrVariant sumStrVariants | e
+sumStrVariant -> LITERAL SEPARATOR

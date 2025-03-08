@@ -1,0 +1,27 @@
+prod User {
+  age Int,
+  name Str,
+  email Str?,
+  hobbies []?Str,
+  Status,
+  UserData,
+}
+
+sumstr Status {
+  "Active",
+  "Disabled",
+  "Pending",
+}
+
+sum UserData {
+  AdminData,
+  CustomerData,
+}
+
+prod AdminData {
+  accessLevel Int,
+}
+
+prod CustomerData {
+  attributes Object,
+}
