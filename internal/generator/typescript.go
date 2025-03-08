@@ -41,7 +41,7 @@ func printTsSumStr(s ast.SumStr) string {
 	for _, variant := range s.Variants {
 		variantsString += fmt.Sprintf(`| "%s" `, variant)
 	}
-	return fmt.Sprintf(`type %s = %s; `, s.Id, variantsString)
+	return fmt.Sprintf(`export type %s = %s; `, s.Id, variantsString)
 }
 
 func printTsSum(s ast.Sum) string {
@@ -49,7 +49,7 @@ func printTsSum(s ast.Sum) string {
 	for _, variant := range s.Variants {
 		variantsString += fmt.Sprintf(`| { _type:"%s"; %s} `, variant.Id, printTsField(variant))
 	}
-	return fmt.Sprintf(`type %s = %s; `, s.Id, variantsString)
+	return fmt.Sprintf(`export type %s = %s; `, s.Id, variantsString)
 }
 
 func printTsProduct(p ast.Product) string {
@@ -57,7 +57,7 @@ func printTsProduct(p ast.Product) string {
 	for _, field := range p.Fields {
 		fieldsString += printTsField(field) + " "
 	}
-	return fmt.Sprintf(`interface %s { %s}; `, p.Id, fieldsString)
+	return fmt.Sprintf(`export interface %s { %s}; `, p.Id, fieldsString)
 }
 
 func printTsField(f ast.Field) string {

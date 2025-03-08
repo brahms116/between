@@ -42,7 +42,7 @@ prod CustomerData {
 Generates the following TypeScript code
 
 ```ts
-interface User {
+export interface User {
   age: number;
   name: string;
   email?: string;
@@ -50,16 +50,17 @@ interface User {
   status: Status;
   userData: UserData;
 }
-type Status = "Active" | "Disabled" | "Pending";
-type UserData =
+export type Status = "Active" | "Disabled" | "Pending";
+export type UserData =
   | { _type: "adminData"; adminData: AdminData }
   | { _type: "customerData"; customerData: CustomerData };
-interface AdminData {
+export interface AdminData {
   accessLevel: number;
 }
-interface CustomerData {
+export interface CustomerData {
   attributes: Record<string, unknown>;
 }
+
 ```
 
 and the following Go code
