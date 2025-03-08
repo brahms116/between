@@ -17,6 +17,14 @@ const NUM_TYPE_STRING = "Num"
 const STR_TYPE_STRING = "Str"
 const OBJ_TYPE_STRING = "Obj"
 
+func LexAndParse(input string) ([]ast.Definition, error) {
+	tokens, err := lex.Lex(input)
+	if err != nil {
+		return nil, err
+	}
+	return Parse(tokens)
+}
+
 func Parse(input []lex.Token) ([]ast.Definition, error) {
 	p := &parser{input: input}
 	return p.parse()

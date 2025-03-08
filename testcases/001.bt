@@ -1,6 +1,6 @@
 prod User {
   name Str,
-  age Num?,
+  age Int?,
   gender Str?,
   friendIds []?Str?,
   array2d [][]?Int?,
@@ -19,10 +19,10 @@ sum Data {
 }
 
 prod AdminData {
-  level Num,
+  level Int,
 }
 
 prod UserData {
-  id Num,
-  data Obj,
+  id Int,
+  data Object,
 }
