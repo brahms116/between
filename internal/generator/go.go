@@ -50,11 +50,22 @@ func printGoSumStr(s ast.SumStr) string {
 
 func printGoSum(s ast.Sum) string {
 	var variantsString string
-	for _, variant := range s.Variants {
+
+	variantIds := make([]string, len(s.Variants))
+	for i, variant := range s.Variants {
 		// Variants can't be optional, yet?
+		variantIds[i] = variant.Id
 		variantsString += fmt.Sprintf(`%s`, printGoField(variant, true))
 	}
-	return fmt.Sprintf(`type %s struct { %s};`, s.Id, variantsString)
+
+	sumTagId := s.Id + "_" + "Type"
+
+	sumTag := ast.SumStr{
+		Id:       sumTagId,
+		Variants: variantIds,
+	}
+	return printGoSumStr(sumTag) +
+		fmt.Sprintf("type %s struct { Type %s `json:\"_type\"`;  %s};", s.Id, sumTagId, variantsString)
 }
 
 func printGoProduct(p ast.Product) string {

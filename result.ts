@@ -1,1 +1,23 @@
-interface User { name: string; age?: Num; gender?: string; friendIds?: (string|undefined)[]; array2d: ((number|undefined)[]|undefined)[]; status: Status; data: Data; }; type Status = | "NOT_HERE" | "REALLY" ; type Data = | { adminData: AdminData;} | { userData: UserData;} ; interface AdminData { level: Num; }; interface UserData { id: Num; data: Obj; }; 
+interface User {
+  name: string;
+  age?: number;
+  gender?: string;
+  friendIds?: (string | undefined)[];
+  array2d: ((number | undefined)[] | undefined)[];
+  status: Status;
+  data: Data;
+}
+
+type Status = "NOT_HERE" | "REALLY";
+
+type Data =
+  | { _type: "adminData"; adminData: AdminData }
+  | { _type: "userData"; userData: UserData };
+
+interface AdminData {
+  level: number;
+}
+interface UserData {
+  id: number;
+  data: Record<string, unknown>;
+}
