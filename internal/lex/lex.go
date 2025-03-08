@@ -17,10 +17,6 @@ const (
 	TOKEN_LIST
 	TOKEN_SEPARATOR
 
-	TOKEN_STR
-	TOKEN_NUM
-	TOKEN_OBJ
-
 	TOKEN_OPTIONAL
 )
 
@@ -28,9 +24,6 @@ var stringToToken map[string]TokenType = map[string]TokenType{
 	"prod":   TOKEN_PRODUCT,
 	"sum":    TOKEN_SUM,
 	"sumstr": TOKEN_SUM_STR,
-	"Str":    TOKEN_STR,
-	"Num":    TOKEN_NUM,
-	"Obj":    TOKEN_OBJ,
 }
 
 type Location struct {

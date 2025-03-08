@@ -10,7 +10,6 @@ import (
 )
 
 func TestParseSmoke(t *testing.T) {
-
 	data, err := os.ReadFile("../../testcases/001.bt")
 	assert.Nil(t, err)
   tokens, err := lex.Lex(string(data))

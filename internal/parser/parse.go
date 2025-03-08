@@ -194,10 +194,7 @@ func (p *parser) parseField() (ast.Field, error) {
 	p.pos++
 
 	currToken = p.currToken()
-	if currToken.Type == lex.TOKEN_ID ||
-		currToken.Type == lex.TOKEN_STR ||
-		currToken.Type == lex.TOKEN_NUM ||
-		currToken.Type == lex.TOKEN_OBJ {
+	if currToken.Type == lex.TOKEN_ID || currToken.Type == lex.TOKEN_LIST {
 		fieldType, err := p.parseType()
 		if err != nil {
 			return ast.Field{}, err
@@ -223,11 +220,15 @@ func (p *parser) parseField() (ast.Field, error) {
 		}
 		p.pos++
 
+		typeIdent := ast.TypeIdent{
+			Nullable: fieldNullable,
+			Id:       name,
+		}
+
 		return ast.Field{
 			Id: lowerCaseFirstLetter(name),
 			Type: ast.Type{
-				Name:     name,
-				Nullable: fieldNullable,
+				TypeIdent: &typeIdent,
 			},
 		}, nil
 	}
@@ -235,40 +236,59 @@ func (p *parser) parseField() (ast.Field, error) {
 	return ast.Field{}, fmt.Errorf("Unexpected token %s at %d", currToken.String(), currToken.Loc.FilePos)
 }
 
-func (p *parser) parseType() (ast.Type, error) {
-	var name string
-	nameToken := p.currToken()
-	switch nameToken.Type {
-	case lex.TOKEN_ID:
-		name = nameToken.Value
-	case lex.TOKEN_NUM:
-		name = NUM_TYPE_STRING
-	case lex.TOKEN_STR:
-		name = STR_TYPE_STRING
-  case lex.TOKEN_OBJ:
-    name = OBJ_TYPE_STRING
-	default:
-		return ast.Type{}, fmt.Errorf("Unexpected token at %d, expected name of a type", nameToken.Loc.FilePos)
+func (p *parser) parseTypeIdent() (ast.TypeIdent, error) {
+	if p.currToken().Type != lex.TOKEN_ID {
+		return ast.TypeIdent{}, fmt.Errorf("Unexpected %s at %d, expected type identifier", p.currToken().String(), p.currToken().Loc.FilePos)
 	}
+
+	name := p.currToken().Value
 	p.pos++
-	typeNullable := p.parseNullability()
-	typeList := p.parseList()
-	return ast.Type{
-		Name:     name,
-		Nullable: typeNullable,
-		List:     typeList,
+
+	nullable := p.parseNullability()
+
+	return ast.TypeIdent{
+		Id:       name,
+		Nullable: nullable,
 	}, nil
 }
 
-func (p *parser) parseList() *ast.List {
-	if p.currToken().Type == lex.TOKEN_LIST {
-		p.pos++
-		isNullable := p.parseNullability()
-		return &ast.List{
-			Nullable: isNullable,
-		}
+func (p *parser) parseList() (ast.List, error) {
+	if p.currToken().Type != lex.TOKEN_LIST {
+		return ast.List{}, fmt.Errorf("Unexpected %s at %d, expected []", p.currToken().String(), p.currToken().Loc.FilePos)
 	}
-	return nil
+	p.pos++
+	nullable := p.parseNullability()
+	listType, err := p.parseType()
+	if err != nil {
+		return ast.List{}, err
+	}
+	return ast.List{
+		Nullable: nullable,
+		Type:     listType,
+	}, nil
+}
+
+func (p *parser) parseType() (ast.Type, error) {
+	switch p.currToken().Type {
+	case lex.TOKEN_ID:
+		typeIdent, err := p.parseTypeIdent()
+		if err != nil {
+			return ast.Type{}, err
+		}
+		return ast.Type{
+			TypeIdent: &typeIdent,
+		}, nil
+	case lex.TOKEN_LIST:
+		typeList, err := p.parseList()
+		if err != nil {
+			return ast.Type{}, err
+		}
+		return ast.Type{
+			List: &typeList,
+		}, nil
+	default:
+	}
+	return ast.Type{}, fmt.Errorf("Unexpected token %s at %d, expected name of a type", p.currToken().String(), p.currToken().Loc.FilePos)
 }
 
 func (p *parser) parseNullability() bool {

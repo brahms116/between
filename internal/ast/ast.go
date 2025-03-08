@@ -3,13 +3,18 @@ package ast
 // TODO add span location
 
 type Type struct {
-	Name     string
+	List      *List
+	TypeIdent *TypeIdent
+}
+
+type TypeIdent struct {
+	Id       string
 	Nullable bool
-	List     *List
 }
 
 type List struct {
 	Nullable bool
+	Type     Type
 }
 
 type Field struct {

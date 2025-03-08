@@ -12,9 +12,6 @@ var TokenTypeDisplay map[TokenType]string = map[TokenType]string{
 	TOKEN_RBRACE:    "TOKEN_RBRACE",
 	TOKEN_LIST:      "TOKEN_LIST",
 	TOKEN_SEPARATOR: "TOKEN_SEPARATOR",
-	TOKEN_STR:       "TOKEN_STR",
-	TOKEN_NUM:       "TOKEN_NUM",
-	TOKEN_OBJ:       "TOKEN_OBJ",
 	TOKEN_OPTIONAL:  "TOKEN_OPTIONAL",
 }
 

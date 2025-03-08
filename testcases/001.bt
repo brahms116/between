@@ -2,7 +2,8 @@ prod User {
   name Str,
   age Num?,
   gender Str?,
-  friendIds Str?[]?,
+  friendIds []?Str?,
+  array2d [][]?Int?,
   Status,
   Data,
 }
