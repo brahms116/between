@@ -98,3 +98,10 @@ type CustomerData struct {
 	Attributes map[string]any `json:"attributes"`
 }
 ```
+
+## TODOs
+
+- [ ] Use `runes` instead of `bytes`
+- [ ] Add type checking
+- [ ] Add LSP support
+- [ ] Add support for more languages
