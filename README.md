@@ -105,3 +105,9 @@ type CustomerData struct {
 - [ ] Add type checking
 - [ ] Add LSP support
 - [ ] Add support for more languages
+
+# Installation
+
+```sh
+go install github.com/brahms116/between/cmd/bt@latest
+```
