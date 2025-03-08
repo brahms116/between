@@ -111,3 +111,15 @@ type CustomerData struct {
 ```sh
 go install github.com/brahms116/between/cmd/bt@latest
 ```
+
+## Usage
+
+```sh
+bt --input ./demo.bt --output ./result.go && gofmt -w ./result.go
+```
+
+or
+
+```sh
+bt --input ./demo.bt --output ./result.ts && prettier --write ./result.ts
+``` 
