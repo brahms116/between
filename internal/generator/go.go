@@ -16,12 +16,17 @@ var GO_PRIMITIVES map[string]string = map[string]string{
 	"Object": "map[string]any",
 }
 
-func printGoDefinitions(ds []ast.Definition) string {
+type GoGeneratorOptions struct {
+	PackageName string
+}
+
+func PrintGoDefinitions(ds []ast.Definition, options GoGeneratorOptions) string {
 	var definitionString string
 	for _, d := range ds {
 		definitionString += printGoDefinition(d)
 	}
-	return "package main;" + definitionString
+	packageString := fmt.Sprintf("package %s;", options.PackageName)
+	return packageString + definitionString
 }
 
 func printGoDefinition(d ast.Definition) string {

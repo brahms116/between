@@ -1,4 +1,4 @@
-package main
+package result
 
 type User struct {
 	Name      string     `json:"name"`

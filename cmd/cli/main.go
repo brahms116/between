@@ -9,9 +9,31 @@ import (
 	"github.com/brahms116/between/internal/parser"
 )
 
-var extentionOutputMap map[string]generator.OutputFormat = map[string]generator.OutputFormat{
-	"ts": generator.TypescriptOut,
-	"go": generator.GolangOut,
+type OutputFormat string
+
+const (
+	TypescriptOut OutputFormat = "Typescript"
+	GolangOut     OutputFormat = "Golang"
+)
+
+var extentionOutputMap map[string]OutputFormat = map[string]OutputFormat{
+	"ts": TypescriptOut,
+	"go": GolangOut,
+}
+
+func parseOutputFileDetails(outputFileLocation string) (filename string, format OutputFormat) {
+	parts := strings.Split(outputFileLocation, "/")
+	fileName := parts[len(parts)-1]
+	parts = strings.Split(fileName, ".")
+	extension := parts[len(parts)-1]
+	fileName = parts[0]
+
+	outputFormat, ok := extentionOutputMap[extension]
+	if !ok {
+		log.Panic("Unsupported output format")
+	}
+
+	return fileName, outputFormat
 }
 
 func main() {
@@ -20,13 +42,7 @@ func main() {
 		log.Panic(err)
 	}
 
-	parts := strings.Split(args.outputFileLocation, ".")
-	extension := parts[len(parts)-1]
-
-	outputFormat, ok := extentionOutputMap[extension]
-	if !ok {
-		log.Panic("Unsupported output format")
-	}
+	fileName, outputFormat := parseOutputFileDetails(args.outputFileLocation)
 
 	input, err := os.ReadFile(args.inputFileLocation)
 	if err != nil {
@@ -38,7 +54,18 @@ func main() {
 		log.Panic(err)
 	}
 
-	output := generator.GenerateOutput(definitions, outputFormat)
+	var output string
+	switch outputFormat {
+	case TypescriptOut:
+		output = generator.PrintTsDefinitions(definitions)
+	case GolangOut:
+		goPackageName := args.goPackageName
+		if goPackageName == "" {
+			goPackageName = fileName
+		}
+		output = generator.PrintGoDefinitions(definitions, generator.GoGeneratorOptions{PackageName: goPackageName})
+	}
+
 	err = os.WriteFile(args.outputFileLocation, []byte(output), 0644)
 	if err != nil {
 		log.Panic(err)

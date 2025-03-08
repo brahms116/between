@@ -8,6 +8,7 @@ import (
 type flags struct {
 	inputFileLocation  string
 	outputFileLocation string
+	goPackageName      string
 }
 
 func newFlags() (flags, error) {
@@ -15,6 +16,7 @@ func newFlags() (flags, error) {
 
 	flag.StringVar(&f.inputFileLocation, "input", "", "path to the input file")
 	flag.StringVar(&f.outputFileLocation, "output", "", "path to the output file")
+	flag.StringVar(&f.goPackageName, "go-package-name", "", "package name for the generated go file, defaults to the name of the input file")
 	flag.Parse()
 
 	if f.outputFileLocation == "" {

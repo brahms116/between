@@ -15,7 +15,7 @@ var TS_PRIMITIVES map[string]string = map[string]string{
 	"Object": "Record<string, unknown>",
 }
 
-func printTsDefinitions(ds []ast.Definition) string {
+func PrintTsDefinitions(ds []ast.Definition) string {
 	var definitionString string
 	for _, d := range ds {
 		definitionString += printTsDefinition(d)
