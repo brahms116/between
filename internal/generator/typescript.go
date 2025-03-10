@@ -39,7 +39,11 @@ func printTsDefinition(d ast.Definition) string {
 func printTsSumStr(s ast.SumStr) string {
 	var variantsString string
 	for _, variant := range s.Variants {
-		variantsString += fmt.Sprintf(`| "%s" `, variant)
+		var name = variant.Id
+		if variant.JsonName != nil {
+			name = *variant.JsonName
+		}
+		variantsString += fmt.Sprintf(`| "%s" `, name)
 	}
 	return fmt.Sprintf(`export type %s = %s; `, s.Id, variantsString)
 }
@@ -66,7 +70,13 @@ func printTsField(f ast.Field) string {
 	if nullable {
 		nullableString = "?"
 	}
-	return fmt.Sprintf(`%s%s: %s;`, f.Id, nullableString, typeString)
+
+	fieldId := f.Id
+	if f.JsonName != nil {
+		fieldId = fmt.Sprintf(`"%s"`, *f.JsonName)
+	}
+
+	return fmt.Sprintf(`%s%s: %s;`, fieldId, nullableString, typeString)
 }
 
 func printTsType(t ast.Type) (bool, string) {

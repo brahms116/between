@@ -18,8 +18,9 @@ type List struct {
 }
 
 type Field struct {
-	Id   string
-	Type Type
+	Id       string
+	JsonName *string
+	Type     Type
 }
 
 type Product struct {
@@ -34,7 +35,12 @@ type Sum struct {
 
 type SumStr struct {
 	Id       string
-	Variants []string
+	Variants []SumStrVariant
+}
+
+type SumStrVariant struct {
+	Id       string
+	JsonName *string
 }
 
 type Definition struct {

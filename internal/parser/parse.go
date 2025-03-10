@@ -92,17 +92,25 @@ func (p *parser) parseSumStr() (ast.SumStr, error) {
 
 }
 
-func (p *parser) parseSumStrVariants() ([]string, error) {
-	variants := []string{}
+func (p *parser) parseSumStrVariants() ([]ast.SumStrVariant, error) {
+	variants := []ast.SumStrVariant{}
 	for {
-		if p.currToken().Type != lex.TOKEN_LITERAL {
+		if p.currToken().Type != lex.TOKEN_ID {
 			break
 		}
 
-		variants = append(variants, p.currToken().Value)
+		name := p.currToken().Value
 		p.pos++
 
+		jsonName := p.parseJsonRename()
+
+		variants = append(variants, ast.SumStrVariant{
+			Id:       name,
+			JsonName: jsonName,
+		})
+
 		if p.currToken().Type != lex.TOKEN_SEPARATOR {
+			println(p.currToken().String())
 			return nil, fmt.Errorf("Expected SEPARATOR at %d", p.currToken().Loc.FilePos)
 		}
 		p.pos++
@@ -202,7 +210,10 @@ func (p *parser) parseField() (ast.Field, error) {
 	p.pos++
 
 	currToken = p.currToken()
-	if currToken.Type == lex.TOKEN_ID || currToken.Type == lex.TOKEN_LIST {
+	if currToken.Type == lex.TOKEN_ID || currToken.Type == lex.TOKEN_LIST || currToken.Type == lex.TOKEN_LITERAL {
+		jsonName := p.parseJsonRename()
+		currToken = p.currToken()
+
 		fieldType, err := p.parseType()
 		if err != nil {
 			return ast.Field{}, err
@@ -215,8 +226,9 @@ func (p *parser) parseField() (ast.Field, error) {
 		p.pos++
 
 		return ast.Field{
-			Id:   name,
-			Type: fieldType,
+			Id:       name,
+			JsonName: jsonName,
+			Type:     fieldType,
 		}, nil
 	}
 	if currToken.Type == lex.TOKEN_OPTIONAL || currToken.Type == lex.TOKEN_SEPARATOR {
@@ -305,6 +317,15 @@ func (p *parser) parseNullability() bool {
 		return true
 	}
 	return false
+}
+
+func (p *parser) parseJsonRename() *string {
+	if p.currToken().Type == lex.TOKEN_LITERAL {
+		value := p.currToken().Value
+		p.pos++
+		return &value
+	}
+	return nil
 }
 
 func (p *parser) currToken() lex.Token {

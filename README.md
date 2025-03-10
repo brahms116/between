@@ -12,7 +12,7 @@ Given the following file `demo.bt`
 ```bt
 prod User {
   age Int,
-  name Str,
+  name "$name" Str,
   email Str?,
   hobbies []?Str,
   Status,
@@ -20,9 +20,9 @@ prod User {
 }
 
 sumstr Status {
-  "Active",
-  "Disabled",
-  "Pending",
+  Active,
+  Disabled,
+  Pending "pending activation",
 }
 
 sum UserData {
@@ -44,13 +44,13 @@ Generates the following TypeScript code
 ```ts
 export interface User {
   age: number;
-  name: string;
+  $name: string;
   email?: string;
   hobbies?: string[];
   status: Status;
   userData: UserData;
 }
-export type Status = "Active" | "Disabled" | "Pending";
+export type Status = "Active" | "Disabled" | "pending activation";
 export type UserData =
   | { _type: "adminData"; adminData: AdminData }
   | { _type: "customerData"; customerData: CustomerData };
@@ -60,7 +60,6 @@ export interface AdminData {
 export interface CustomerData {
   attributes: Record<string, unknown>;
 }
-
 ```
 
 and the following Go code
@@ -70,7 +69,7 @@ package demo
 
 type User struct {
 	Age      int       `json:"age"`
-	Name     string    `json:"name"`
+	Name     string    `json:"$name"`
 	Email    *string   `json:"email,omitEmpty"`
 	Hobbies  *[]string `json:"hobbies,omitEmpty"`
 	Status   Status    `json:"status"`
@@ -80,7 +79,7 @@ type Status string
 
 const Status_Active Status = "Active"
 const Status_Disabled Status = "Disabled"
-const Status_Pending Status = "Pending"
+const Status_Pending Status = "pending activation"
 
 type UserData_Type string
 
@@ -103,6 +102,8 @@ type CustomerData struct {
 ## TODOs
 
 - [ ] Use `runes` instead of `bytes`
+- [ ] Split ast and codegen input. Tokens should be part of the AST so that it can contain sugar and locations so it can be used for formatting.
+- [ ] Add support for doc comments
 - [ ] Add type checking
 - [ ] Add LSP support
 - [ ] Add support for more languages

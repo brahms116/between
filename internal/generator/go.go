@@ -47,8 +47,14 @@ func printGoSumStr(s ast.SumStr) string {
 	var variantsString string
 	for _, variant := range s.Variants {
 		// Variants can't be optional, yet?
-		variantName := s.Id + "_" + variant
-		variantsString += fmt.Sprintf(`const %s %s = "%s";`, variantName, s.Id, variant)
+		variantName := s.Id + "_" + variant.Id
+
+		variantValue := variant.Id
+		if variant.JsonName != nil {
+			variantValue = *variant.JsonName
+		}
+
+		variantsString += fmt.Sprintf(`const %s %s = "%s";`, variantName, s.Id, variantValue)
 	}
 	return typeDec + variantsString
 }
@@ -56,10 +62,11 @@ func printGoSumStr(s ast.SumStr) string {
 func printGoSum(s ast.Sum) string {
 	var variantsString string
 
-	variantIds := make([]string, len(s.Variants))
+	stringVariants := make([]ast.SumStrVariant, len(s.Variants))
 	for i, variant := range s.Variants {
-		// Variants can't be optional, yet?
-		variantIds[i] = variant.Id
+		stringVariants[i] = ast.SumStrVariant{
+			Id: variant.Id,
+		}
 		variantsString += fmt.Sprintf(`%s`, printGoField(variant, true))
 	}
 
@@ -67,8 +74,9 @@ func printGoSum(s ast.Sum) string {
 
 	sumTag := ast.SumStr{
 		Id:       sumTagId,
-		Variants: variantIds,
+		Variants: stringVariants,
 	}
+
 	return printGoSumStr(sumTag) +
 		fmt.Sprintf("type %s struct { Type %s `json:\"_type\"`;  %s};", s.Id, sumTagId, variantsString)
 }
@@ -87,7 +95,13 @@ func printGoField(f ast.Field, forcePointer bool) string {
 	if f.Type.IsNullable() || forcePointer {
 		omitEmptyTag = ",omitEmpty"
 	}
-	jsonTag := fmt.Sprintf("`json:\"%s%s\"`", f.Id, omitEmptyTag)
+
+	jsonName := f.Id
+	if f.JsonName != nil {
+		jsonName = *f.JsonName
+	}
+
+	jsonTag := fmt.Sprintf("`json:\"%s%s\"`", jsonName, omitEmptyTag)
 
 	return fmt.Sprintf(`%s %s %s;`, fieldName, printGoType(f.Type, forcePointer), jsonTag)
 }

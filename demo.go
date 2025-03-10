@@ -2,7 +2,7 @@ package demo
 
 type User struct {
 	Age      int       `json:"age"`
-	Name     string    `json:"name"`
+	Name     string    `json:"$name"`
 	Email    *string   `json:"email,omitEmpty"`
 	Hobbies  *[]string `json:"hobbies,omitEmpty"`
 	Status   Status    `json:"status"`
@@ -12,7 +12,7 @@ type Status string
 
 const Status_Active Status = "Active"
 const Status_Disabled Status = "Disabled"
-const Status_Pending Status = "Pending"
+const Status_Pending Status = "pending activation"
 
 type UserData_Type string
 

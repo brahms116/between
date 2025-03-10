@@ -1,5 +1,5 @@
 prod User {
-  name Str,
+  name "$name" Str,
   age Int?,
   gender Str?,
   friendIds []?Str?,
@@ -9,8 +9,9 @@ prod User {
 }
 
 sumstr Status {
-  "NOT_HERE",
-  "REALLY",
+  NotHere "not here",
+  Really,
+  ReallyReally "REALLY_REALLY",
 }
 
 sum Data {

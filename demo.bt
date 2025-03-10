@@ -1,6 +1,6 @@
 prod User {
   age Int,
-  name Str,
+  name "$name" Str,
   email Str?,
   hobbies []?Str,
   Status,
@@ -8,9 +8,9 @@ prod User {
 }
 
 sumstr Status {
-  "Active",
-  "Disabled",
-  "Pending",
+  Active,
+  Disabled,
+  Pending "pending activation",
 }
 
 sum UserData {

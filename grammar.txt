@@ -19,7 +19,9 @@ nullability -> OPTIONAL | e
 
 fields -> field fields | e
 field -> ID fieldTail
-fieldTail -> nullability SEPARATOR | type SEPARATOR
+fieldTail -> nullability SEPARATOR | jsonRename type SEPARATOR
+
+jsonRename -> LITERAL | e
 
 sum -> SUM ID LBRACE fields RBRACE
 
@@ -27,4 +29,4 @@ product -> PROD ID LBRACE fields RBRACE
 
 sumStr -> SUM_STR ID LBRACE sumStrVariants RBRACE
 sumStrVariants -> sumStrVariant sumStrVariants | e
-sumStrVariant -> LITERAL SEPARATOR
+sumStrVariant -> ID jsonRename SEPARATOR
