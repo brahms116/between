@@ -2,6 +2,7 @@ package lex
 
 import (
 	"fmt"
+	"unicode/utf8"
 )
 
 type TokenType int
@@ -27,8 +28,19 @@ var stringToToken map[string]TokenType = map[string]TokenType{
 }
 
 type Location struct {
-	FilePos int
-	Length  int
+	ByteStart int
+	ByteEnd   int
+	Start     Point
+	End       Point
+}
+
+type Point struct {
+	Row int
+	Col int
+}
+
+func (p Point) String() string {
+	return fmt.Sprintf("(Row %d, Col %d)", p.Row+1, p.Col+1)
 }
 
 type Token struct {
@@ -41,7 +53,14 @@ type lexer struct {
 	input    string
 	startPos int
 	currPos  int
-	tokens   []Token
+
+	startPt Point
+	currPt  Point
+
+	// Should be okay because we don't backup more than 1 rune ever
+	lastRowEnd int
+
+	tokens []Token
 }
 
 func Lex(input string) ([]Token, error) {
@@ -59,7 +78,7 @@ func (l *lexer) Lex() ([]Token, error) {
 
 		if isWhiteSpace(*currChar) {
 			l.eatWhile(isWhiteSpace)
-			l.startPos = l.currPos
+			l.updateStart()
 			continue
 		}
 
@@ -108,7 +127,7 @@ func (l *lexer) Lex() ([]Token, error) {
 }
 
 func (l *lexer) lexLiteral() error {
-	l.eatWhile(func(b byte) bool {
+	l.eatWhile(func(b rune) bool {
 		return b != '"'
 	})
 	next := l.next()
@@ -141,33 +160,56 @@ func (l *lexer) acceptToken(tokenType TokenType) {
 }
 
 func (l *lexer) acceptTokenWithValue(tokenType TokenType, value string) {
-	length := l.currPos - l.startPos
-	start := l.startPos
 	token := Token{
 		Type:  tokenType,
 		Value: value,
 		Loc: Location{
-			FilePos: start,
-			Length:  length,
+			ByteStart: l.startPos,
+			ByteEnd:   l.currPos,
+			Start:     l.startPt,
+			End:       l.currPt,
 		},
 	}
 	l.tokens = append(l.tokens, token)
-	l.startPos = l.currPos
+	l.updateStart()
 }
 
-func (l *lexer) next() *byte {
+func (l *lexer) updateStart() {
+	l.startPos = l.currPos
+	l.startPt = l.currPt
+}
+
+func (l *lexer) next() *rune {
 	if l.currPos >= len(l.input) {
-		l.currPos++
 		return nil
 	}
-	char := l.input[l.currPos]
-	l.currPos++
-	return &char
+
+	r, w := utf8.DecodeRuneInString(l.input[l.currPos:])
+	if w == 0 {
+		return nil
+	}
+	l.currPos += w
+
+	if r == '\n' {
+		l.lastRowEnd = l.currPt.Col
+		l.currPt.Col = 0
+		l.currPt.Row++
+	} else {
+		l.currPt.Col++
+	}
+
+	return &r
 }
 
 func (l *lexer) backup() {
 	if l.currPos > l.startPos {
 		l.currPos--
+		if l.currPt.Col == 0 {
+			l.currPt.Row--
+			l.currPt.Col = l.lastRowEnd
+		} else {
+			l.currPt.Col--
+		}
 	}
 }
 
@@ -175,11 +217,10 @@ func (l *lexer) currString() string {
 	return l.input[l.startPos:l.currPos]
 }
 
-func (l *lexer) eatWhile(fn func(byte) bool) {
+func (l *lexer) eatWhile(fn func(rune) bool) {
 	for {
 		next := l.next()
 		if next == nil {
-			l.backup()
 			return
 		}
 

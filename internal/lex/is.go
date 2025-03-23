@@ -1,21 +1,21 @@
 package lex
 
-func isAlphaNum(char byte) bool {
-	return isAlpha(char) || isNum(char)
+func isAlphaNum(r rune) bool {
+	return isAlpha(r) || isNum(r)
 }
 
-func isAlpha(char byte) bool {
-	return (char >= 'a' && char <= 'z') || (char >= 'A' && char <= 'Z')
+func isAlpha(r rune) bool {
+	return (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z')
 }
 
-func isNum(char byte) bool {
-	return (char >= '0' && char <= '9')
+func isNum(r rune) bool {
+	return (r >= '0' && r <= '9')
 }
 
-func isNewLine(char byte) bool {
-	return char == '\n' || char == '\r'
+func isNewLine(r rune) bool {
+	return r == '\n' || r == '\r'
 }
 
-func isWhiteSpace(char byte) bool {
-	return char == ' ' || char == '\t' || isNewLine(char)
-} 
+func isWhiteSpace(r rune) bool {
+	return r == ' ' || r == '\t' || isNewLine(r)
+}
