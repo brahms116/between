@@ -2,6 +2,7 @@ package lex
 
 import (
 	"fmt"
+	"unicode/utf8"
 )
 
 type TokenType int
@@ -108,7 +109,7 @@ func (l *lexer) Lex() ([]Token, error) {
 }
 
 func (l *lexer) lexLiteral() error {
-	l.eatWhile(func(b byte) bool {
+	l.eatWhile(func(b rune) bool {
 		return b != '"'
 	})
 	next := l.next()
@@ -155,13 +156,17 @@ func (l *lexer) acceptTokenWithValue(tokenType TokenType, value string) {
 	l.startPos = l.currPos
 }
 
-func (l *lexer) next() *byte {
+func (l *lexer) next() *rune {
 	if l.currPos >= len(l.input) {
 		return nil
 	}
-	char := l.input[l.currPos]
-	l.currPos++
-	return &char
+
+	cp, w := utf8.DecodeRuneInString(l.input[l.currPos:])
+	if w == 0 {
+		return nil
+	}
+	l.currPos += w
+	return &cp
 }
 
 func (l *lexer) backup() {
@@ -174,7 +179,7 @@ func (l *lexer) currString() string {
 	return l.input[l.startPos:l.currPos]
 }
 
-func (l *lexer) eatWhile(fn func(byte) bool) {
+func (l *lexer) eatWhile(fn func(rune) bool) {
 	for {
 		next := l.next()
 		if next == nil {
