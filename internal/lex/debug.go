@@ -15,6 +15,10 @@ var TokenTypeDisplay map[TokenType]string = map[TokenType]string{
 	TOKEN_OPTIONAL:  "TOKEN_OPTIONAL",
 }
 
+func (t TokenType) String() string {
+  return TokenTypeDisplay[t]
+}
+
 func (t Token) String() string {
 	if t.Value == "" {
 		return TokenTypeDisplay[t.Type]

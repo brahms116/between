@@ -1,9 +1,11 @@
 package lex
 
 import (
+	"encoding/json"
 	"log"
 	"os"
 	"testing"
+
 	"github.com/stretchr/testify/assert"
 )
 
@@ -19,8 +21,16 @@ var cases []testCase = []testCase{
 			{
 				Type: TOKEN_PRODUCT,
 				Loc: Location{
-					FilePos:  0,
-					Length: 4,
+					ByteStart: 0,
+					ByteEnd:   4,
+					Start: Point{
+						Row: 0,
+						Col: 0,
+					},
+					End: Point{
+						Row: 0,
+						Col: 4,
+					},
 				},
 			},
 		},
@@ -29,11 +39,19 @@ var cases []testCase = []testCase{
 		input: "User",
 		expected: []Token{
 			{
-				Type: TOKEN_ID,
-        Value: "User",
+				Type:  TOKEN_ID,
+				Value: "User",
 				Loc: Location{
-					FilePos:  0,
-					Length: 4,
+					ByteStart: 0,
+					ByteEnd:   4,
+					Start: Point{
+						Row: 0,
+						Col: 0,
+					},
+					End: Point{
+						Row: 0,
+						Col: 4,
+					},
 				},
 			},
 		},
@@ -51,9 +69,13 @@ func TestLex(t *testing.T) {
 func TestSmokeLex(t *testing.T) {
 	data, err := os.ReadFile("../../testcases/001.bt")
 	assert.Nil(t, err)
-  tokens, err := Lex(string(data))
-  assert.Nil(t, err)
-  for _, token := range tokens {
-    log.Println(token.String())
-  }
+	tokens, err := Lex(string(data))
+	assert.Nil(t, err)
+	for _, token := range tokens {
+    jsonStr, err := json.MarshalIndent(token, "", "  ")
+    if err != nil {
+      t.Fatal(err)
+    }
+    log.Print(string(jsonStr))
+	}
 }

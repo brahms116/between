@@ -12,6 +12,6 @@ func TestParseSmoke(t *testing.T) {
 	assert.Nil(t, err)
 	defintions, err := LexAndParse(string(data))
 	assert.Nil(t, err)
-	bytes, err := json.Marshal(defintions)
+	bytes, err := json.MarshalIndent(defintions, "", "  ")
 	println(string(bytes))
 }
