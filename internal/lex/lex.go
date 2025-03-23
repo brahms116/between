@@ -157,7 +157,6 @@ func (l *lexer) acceptTokenWithValue(tokenType TokenType, value string) {
 
 func (l *lexer) next() *byte {
 	if l.currPos >= len(l.input) {
-		l.currPos++
 		return nil
 	}
 	char := l.input[l.currPos]
@@ -179,7 +178,6 @@ func (l *lexer) eatWhile(fn func(byte) bool) {
 	for {
 		next := l.next()
 		if next == nil {
-			l.backup()
 			return
 		}
 
