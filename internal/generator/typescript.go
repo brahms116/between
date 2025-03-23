@@ -51,7 +51,7 @@ func printTsSumStr(s ast.SumStr) string {
 func printTsSum(s ast.Sum) string {
 	var variantsString string
 	for _, variant := range s.Variants {
-		variantsString += fmt.Sprintf(`| { _type:"%s"; %s} `, variant.Id, printTsField(variant))
+		variantsString += fmt.Sprintf(`| {%s}`, printTsField(variant))
 	}
 	return fmt.Sprintf(`export type %s = %s; `, s.Id, variantsString)
 }

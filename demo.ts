@@ -8,8 +8,8 @@ export interface User {
 }
 export type Status = "Active" | "Disabled" | "pending activation";
 export type UserData =
-  | { _type: "adminData"; adminData: AdminData }
-  | { _type: "customerData"; customerData: CustomerData };
+  | { adminData: AdminData }
+  | { customerData: CustomerData };
 export interface AdminData {
   accessLevel: number;
 }
