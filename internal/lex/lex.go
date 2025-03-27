@@ -28,8 +28,15 @@ var stringToToken map[string]TokenType = map[string]TokenType{
 }
 
 type Location struct {
-	FilePos int
-	Length  int
+	ByteStart int
+	ByteEnd   int
+	Start     Point
+	End       Point
+}
+
+type Point struct {
+	Row int
+	Col int
 }
 
 type Token struct {
@@ -42,7 +49,14 @@ type lexer struct {
 	input    string
 	startPos int
 	currPos  int
-	tokens   []Token
+
+	startPt Point
+	currPt  Point
+
+	// Should be okay because we don't backup more than 1 rune ever
+	lastRowEnd int
+
+	tokens []Token
 }
 
 func Lex(input string) ([]Token, error) {
@@ -60,7 +74,7 @@ func (l *lexer) Lex() ([]Token, error) {
 
 		if isWhiteSpace(*currChar) {
 			l.eatWhile(isWhiteSpace)
-			l.startPos = l.currPos
+      l.updateStart()
 			continue
 		}
 
@@ -142,18 +156,23 @@ func (l *lexer) acceptToken(tokenType TokenType) {
 }
 
 func (l *lexer) acceptTokenWithValue(tokenType TokenType, value string) {
-	length := l.currPos - l.startPos
-	start := l.startPos
 	token := Token{
 		Type:  tokenType,
 		Value: value,
 		Loc: Location{
-			FilePos: start,
-			Length:  length,
+			ByteStart: l.startPos,
+			ByteEnd:   l.currPos,
+			Start:     l.startPt,
+			End:       l.currPt,
 		},
 	}
 	l.tokens = append(l.tokens, token)
+	l.updateStart()
+}
+
+func (l *lexer) updateStart() {
 	l.startPos = l.currPos
+	l.startPt = l.currPt
 }
 
 func (l *lexer) next() *rune {
@@ -161,17 +180,32 @@ func (l *lexer) next() *rune {
 		return nil
 	}
 
-	cp, w := utf8.DecodeRuneInString(l.input[l.currPos:])
+	r, w := utf8.DecodeRuneInString(l.input[l.currPos:])
 	if w == 0 {
 		return nil
 	}
 	l.currPos += w
-	return &cp
+
+	if r == '\n' {
+		l.lastRowEnd = l.currPt.Col
+		l.currPt.Col = 0
+		l.currPt.Row++
+	} else {
+		l.currPt.Col++
+	}
+
+	return &r
 }
 
 func (l *lexer) backup() {
 	if l.currPos > l.startPos {
 		l.currPos--
+		if l.currPt.Col == 0 {
+			l.currPt.Row--
+			l.currPt.Col = l.lastRowEnd
+		} else {
+			l.currPt.Col--
+		}
 	}
 }
 
