@@ -39,6 +39,10 @@ type Point struct {
 	Col int
 }
 
+func (p Point) String() string {
+	return fmt.Sprintf("(Row %d, Col %d)", p.Row+1, p.Col+1)
+}
+
 type Token struct {
 	Type  TokenType
 	Value string
@@ -74,7 +78,7 @@ func (l *lexer) Lex() ([]Token, error) {
 
 		if isWhiteSpace(*currChar) {
 			l.eatWhile(isWhiteSpace)
-      l.updateStart()
+			l.updateStart()
 			continue
 		}
 
