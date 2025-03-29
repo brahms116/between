@@ -7,6 +7,7 @@ import (
 
 	"github.com/brahms116/between/internal/generator"
 	"github.com/brahms116/between/internal/parser"
+	"github.com/brahms116/between/internal/translate"
 )
 
 type OutputFormat string
@@ -49,7 +50,8 @@ func main() {
 		log.Panic(err)
 	}
 
-	definitions, err := parser.LexAndParse(string(input))
+	st, err := parser.LexAndParse(string(input))
+	definitions, err := translate.Translate(st)
 	if err != nil {
 		log.Panic(err)
 	}

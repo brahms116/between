@@ -2,7 +2,6 @@ package parser
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/brahms116/between/internal/lex"
 	"github.com/brahms116/between/internal/st"
@@ -351,9 +350,3 @@ func (p *parser) currToken() lex.Token {
 	return p.input[p.pos]
 }
 
-func lowerCaseFirstLetter(s string) string {
-	if len(s) == 0 {
-		return s
-	}
-	return strings.ToLower(string(s[0])) + s[1:]
-}
