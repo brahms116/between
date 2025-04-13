@@ -51,7 +51,7 @@ func main() {
 	}
 
 	st, err := parser.LexAndParse(string(input))
-	definitions, err := translate.Translate(st)
+	definitions, primitives ,err := translate.Translate(st)
 	if err != nil {
 		log.Panic(err)
 	}
@@ -65,7 +65,7 @@ func main() {
 		if goPackageName == "" {
 			goPackageName = fileName
 		}
-		output = generator.PrintGoDefinitions(definitions, generator.GoGeneratorOptions{PackageName: goPackageName})
+		output = generator.PrintGoDefinitions(definitions, primitives, generator.GoGeneratorOptions{PackageName: goPackageName})
 	}
 
 	err = os.WriteFile(args.outputFileLocation, []byte(output), 0644)

@@ -7,25 +7,43 @@ import (
 	"github.com/brahms116/between/internal/st"
 )
 
-type translate struct {
-	st []st.Definition
+var PrimitiveTypes = map[string]struct{}{
+	"Float":  {},
+	"Str":    {},
+	"Bool":   {},
+	"Int":    {},
+	"Any":    {},
+	"Object": {},
+  "Date":   {},
 }
 
-func Translate(st []st.Definition) ([]ast.Definition, error) {
-	t := &translate{st: st}
+type translate struct {
+	st                 []st.Definition
+	usedPrimitiveTypes map[string]struct{}
+}
+
+func newTranslate(st []st.Definition) *translate {
+	return &translate{
+		st:                 st,
+		usedPrimitiveTypes: make(map[string]struct{}),
+	}
+}
+
+func Translate(st []st.Definition) ([]ast.Definition, map[string]struct{}, error) {
+	t := newTranslate(st)
 	return t.translate()
 }
 
-func (t *translate) translate() ([]ast.Definition, error) {
+func (t *translate) translate() ([]ast.Definition, map[string]struct{}, error) {
 	var res []ast.Definition
 	for _, d := range t.st {
 		def, err := t.translateDefinition(d)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		res = append(res, def)
 	}
-	return res, nil
+	return res, t.usedPrimitiveTypes, nil
 }
 
 func (t *translate) translateDefinition(d st.Definition) (ast.Definition, error) {
@@ -72,6 +90,10 @@ func (t *translate) translateType(ty st.Type) (ast.Type, error) {
 }
 
 func (t *translate) translateTypeIdent(ti st.TypeIdent) (ast.TypeIdent, error) {
+	if _, ok := PrimitiveTypes[ti.Id.Value]; ok {
+		t.usedPrimitiveTypes[ti.Id.Value] = struct{}{}
+	}
+
 	return ast.TypeIdent{
 		Id:       ti.Id.Value,
 		Nullable: ti.Nullable != nil,

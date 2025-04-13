@@ -14,19 +14,27 @@ var GO_PRIMITIVES map[string]string = map[string]string{
 	"Int":    "int",
 	"Any":    "any",
 	"Object": "map[string]any",
+	"Date":   "time.Time",
 }
 
 type GoGeneratorOptions struct {
 	PackageName string
 }
 
-func PrintGoDefinitions(ds []ast.Definition, options GoGeneratorOptions) string {
+func PrintGoDefinitions(ds []ast.Definition, usedPrimitives map[string]struct{}, options GoGeneratorOptions) string {
 	var definitionString string
 	for _, d := range ds {
 		definitionString += printGoDefinition(d)
 	}
 	packageString := fmt.Sprintf("package %s;", options.PackageName)
-	return packageString + definitionString
+
+	var importsClause string
+	if _, ok := usedPrimitives["Date"]; ok {
+		importsClause += `"time";`
+	}
+
+	importStatement := fmt.Sprintf("import (%s);", importsClause)
+	return packageString + importStatement + definitionString
 }
 
 func printGoDefinition(d ast.Definition) string {

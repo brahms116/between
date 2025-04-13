@@ -3,6 +3,7 @@ prod User {
   name "$name" Str,
   email Str?,
   hobbies []?Str,
+  dateOfBirth Date,
   Status,
   UserData,
 }
