@@ -15,6 +15,7 @@ prod User {
   name "$name" Str,
   email Str?,
   hobbies []?Str,
+  dateOfBirth Date,
   Status,
   UserData,
 }
@@ -37,6 +38,7 @@ prod AdminData {
 prod CustomerData {
   attributes Object,
 }
+
 ```
 
 Generates the following TypeScript code
@@ -47,6 +49,7 @@ export interface User {
   $name: string;
   email?: string;
   hobbies?: string[];
+  dateOfBirth: string;
   status: Status;
   userData: UserData;
 }
@@ -67,13 +70,18 @@ and the following Go code
 ```go
 package demo
 
+import (
+	"time"
+)
+
 type User struct {
-	Age      int       `json:"age"`
-	Name     string    `json:"$name"`
-	Email    *string   `json:"email,omitEmpty"`
-	Hobbies  *[]string `json:"hobbies,omitEmpty"`
-	Status   Status    `json:"status"`
-	UserData UserData  `json:"userData"`
+	Age         int       `json:"age"`
+	Name        string    `json:"$name"`
+	Email       *string   `json:"email,omitEmpty"`
+	Hobbies     *[]string `json:"hobbies,omitEmpty"`
+	DateOfBirth time.Time `json:"dateOfBirth"`
+	Status      Status    `json:"status"`
+	UserData    UserData  `json:"userData"`
 }
 type Status string
 
@@ -91,12 +99,13 @@ type AdminData struct {
 type CustomerData struct {
 	Attributes map[string]any `json:"attributes"`
 }
+
 ```
 
 ## TODOs
 
-- [ ] Use `runes` instead of `bytes`
-- [ ] Split ast and codegen input. Tokens should be part of the AST so that it can contain sugar and locations so it can be used for formatting.
+- [x] Use `runes` instead of `bytes`
+- [x] Split ast and codegen input. Tokens should be part of the AST so that it can contain sugar and locations so it can be used for formatting.
 - [ ] Add support for doc comments
 - [ ] Add type checking
 - [ ] Add LSP support

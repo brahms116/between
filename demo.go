@@ -1,12 +1,17 @@
 package demo
 
+import (
+	"time"
+)
+
 type User struct {
-	Age      int       `json:"age"`
-	Name     string    `json:"$name"`
-	Email    *string   `json:"email,omitEmpty"`
-	Hobbies  *[]string `json:"hobbies,omitEmpty"`
-	Status   Status    `json:"status"`
-	UserData UserData  `json:"userData"`
+	Age         int       `json:"age"`
+	Name        string    `json:"$name"`
+	Email       *string   `json:"email,omitEmpty"`
+	Hobbies     *[]string `json:"hobbies,omitEmpty"`
+	DateOfBirth time.Time `json:"dateOfBirth"`
+	Status      Status    `json:"status"`
+	UserData    UserData  `json:"userData"`
 }
 type Status string
 

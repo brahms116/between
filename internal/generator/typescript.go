@@ -13,6 +13,7 @@ var TS_PRIMITIVES map[string]string = map[string]string{
 	"Int":    "number",
 	"Any":    "unknown",
 	"Object": "Record<string, unknown>",
+	"Date":   "string",
 }
 
 func PrintTsDefinitions(ds []ast.Definition) string {

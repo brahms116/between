@@ -3,6 +3,7 @@ export interface User {
   $name: string;
   email?: string;
   hobbies?: string[];
+  dateOfBirth: string;
   status: Status;
   userData: UserData;
 }

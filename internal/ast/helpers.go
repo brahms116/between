@@ -6,3 +6,4 @@ func (t Type) IsNullable() bool {
 	}
 	return t.TypeIdent.Nullable
 }
+
