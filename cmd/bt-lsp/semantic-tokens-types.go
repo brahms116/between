@@ -1,11 +1,17 @@
 package main
 
 const (
-	SEMTOK_INTERFACE = "interface"
-	SEMTOK_KEYWORD   = "keyword"
+	SEMTOK_CLASS       = "class"
+	SEMTOK_KEYWORD     = "keyword"
+	SEMTOK_PROPERTY    = "property"
+	SEMTOK_STRING      = "string"
+	SEMTOK_ENUM_MEMBER = "enumMember"
 )
 
 const (
-	SEMTOK_INTERFACE_INDEX = iota
+	SEMTOK_CLASS_INDEX = iota
 	SEMTOK_KEYWORD_INDEX
+	SEMTOK_PROPERTY_INDEX
+	SEMTOK_STRING_INDEX
+	SEMTOK_ENUM_MEMBER_INDEX
 )

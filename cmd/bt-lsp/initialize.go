@@ -8,8 +8,11 @@ func newInitializeResponse() InitializeResult {
 			SemanticTokensProvider: &SemanticTokensOptions{
 				Legend: SemanticTokensLegend{
 					TokenTypes: []string{
-						SEMTOK_INTERFACE,
+						SEMTOK_CLASS,
 						SEMTOK_KEYWORD,
+            SEMTOK_PROPERTY,
+            SEMTOK_STRING,
+            SEMTOK_ENUM_MEMBER,
 					},
 				},
 				Full: &semanticTokensSyncFull,
