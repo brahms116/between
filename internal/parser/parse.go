@@ -8,8 +8,9 @@ import (
 )
 
 type parser struct {
-	input []lex.Token
-	pos   int
+	input  []lex.Token
+	pos    int
+	errors []error
 }
 
 const NUM_TYPE_STRING = "Num"
@@ -20,47 +21,88 @@ func UnexpectedTokenError(token lex.Token) error {
 	return fmt.Errorf("Unexpected token %s at %s", token.String(), token.Loc.Start.String())
 }
 
-func ExpectedTokenError(expected lex.TokenType, token lex.Token) error {
-	return fmt.Errorf("Expected %s at %s, got %s", expected.String(), token.Loc.Start.String(), token.String())
+func ExpectedTokenError(expected []lex.TokenType, token lex.Token) error {
+	expectedStr := ""
+	for i, t := range expected {
+		if i > 0 {
+			expectedStr += " or "
+		}
+		expectedStr += t.String()
+	}
+
+	return fmt.Errorf("Expected %s at %s, got %s", expectedStr, token.Loc.Start.String(), token.String())
 }
 
-func LexAndParse(input string) ([]st.Definition, error) {
+func EOFError() error {
+	return fmt.Errorf("Unexpected end of file")
+}
+
+func LexAndParse(input string) ([]st.Definition, []error) {
 	tokens, err := lex.Lex(input)
 	if err != nil {
-		return nil, err
+		return nil, []error{err}
 	}
 	return Parse(tokens)
 }
 
-func Parse(input []lex.Token) ([]st.Definition, error) {
+func Parse(input []lex.Token) ([]st.Definition, []error) {
 	p := &parser{input: input}
-	return p.parse()
+	definitions, _ := p.parse()
+	return definitions, p.errors
 }
 
-func (p *parser) parse() ([]st.Definition, error) {
+func (p *parser) parse() ([]st.Definition, bool) {
 	definitions := []st.Definition{}
-
+	lastDefinitionOk := false
 	for p.pos < len(p.input) {
-		definition, err := p.parseDefinition()
-		if err != nil {
-			return nil, err
-		}
+		definition, ok := p.parseDefinition()
+		lastDefinitionOk = ok
 		definitions = append(definitions, definition)
 	}
-	return definitions, nil
+	return definitions, lastDefinitionOk
 }
 
-func (p *parser) expectToken(tokenType lex.TokenType) (lex.Token, error) {
-  currToken := p.currToken()
-	if currToken.Type != tokenType {
-		return lex.Token{}, ExpectedTokenError(tokenType, currToken)
+func (p *parser) appendErr(err error) {
+	p.errors = append(p.errors, err)
+}
+
+func (p *parser) expectToken(tokenType lex.TokenType, immediateNext bool) (lex.Token, bool) {
+	return p.expectTokens([]lex.TokenType{tokenType}, immediateNext)
+}
+
+func (p *parser) expectTokens(tokenTypes []lex.TokenType, immediateNext bool) (lex.Token, bool) {
+	if p.pos >= len(p.input) {
+		p.appendErr(EOFError())
+		return lex.Token{IsErr: true}, false
 	}
+
+	currToken := p.currToken()
 	p.pos++
-	return currToken, nil
+	found := false
+	for _, tokenType := range tokenTypes {
+		if currToken.Type == tokenType {
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		if immediateNext {
+			p.appendErr(ExpectedTokenError(tokenTypes, currToken))
+			return lex.Token{
+				IsErr: true,
+			}, false
+		}
+		return p.expectTokens(tokenTypes, false)
+	}
+	return currToken, true
 }
 
 func (p *parser) optionalToken(tokenType lex.TokenType) (lex.Token, bool) {
-  currToken := p.currToken()
+	if p.pos >= len(p.input) {
+		return lex.Token{}, false
+	}
+	currToken := p.currToken()
 	if currToken.Type == tokenType {
 		p.pos++
 		return currToken, true
@@ -68,46 +110,40 @@ func (p *parser) optionalToken(tokenType lex.TokenType) (lex.Token, bool) {
 	return lex.Token{}, false
 }
 
-func (p *parser) parseDefinition() (st.Definition, error) {
-	switch p.currToken().Type {
-	case lex.TOKEN_PRODUCT:
-		prod, err := p.parseProduct()
-		return st.Definition{Product: &prod}, err
-	case lex.TOKEN_SUM:
-		sum, err := p.parseSum()
-		return st.Definition{Sum: &sum}, err
-	case lex.TOKEN_SUM_STR:
-		sumStr, err := p.parseSumStr()
-		return st.Definition{SumStr: &sumStr}, err
+func (p *parser) parseDefinition() (st.Definition, bool) {
+
+	currToken, ok := p.expectTokens([]lex.TokenType{
+		lex.TOKEN_PRODUCT,
+		lex.TOKEN_SUM,
+		lex.TOKEN_SUM_STR,
+	}, true)
+
+	if !ok {
+		return st.Definition{}, false
 	}
-	return st.Definition{}, UnexpectedTokenError(p.currToken())
+	p.pos--
+
+	switch currToken.Type {
+	case lex.TOKEN_PRODUCT:
+		prod, ok := p.parseProduct()
+		return st.Definition{Product: &prod}, ok
+	case lex.TOKEN_SUM:
+		sum, ok := p.parseSum()
+		return st.Definition{Sum: &sum}, ok
+	case lex.TOKEN_SUM_STR:
+		sumStr, ok := p.parseSumStr()
+		return st.Definition{SumStr: &sumStr}, ok
+	default:
+		panic("Unreachable")
+	}
 }
 
-func (p *parser) parseSumStr() (st.SumStr, error) {
-	keyword, err := p.expectToken(lex.TOKEN_SUM_STR)
-	if err != nil {
-		return st.SumStr{}, err
-	}
-
-	id, err := p.expectToken(lex.TOKEN_ID)
-	if err != nil {
-		return st.SumStr{}, err
-	}
-
-	lBrace, err := p.expectToken(lex.TOKEN_LBRACE)
-	if err != nil {
-		return st.SumStr{}, err
-	}
-
-	variants, err := p.parseSumStrVariants()
-	if err != nil {
-		return st.SumStr{}, err
-	}
-
-	rBrace, err := p.expectToken(lex.TOKEN_RBRACE)
-	if err != nil {
-		return st.SumStr{}, err
-	}
+func (p *parser) parseSumStr() (st.SumStr, bool) {
+	keyword, ok := p.expectToken(lex.TOKEN_SUM_STR, true)
+	id, ok := p.expectToken(lex.TOKEN_ID, ok)
+	lBrace, ok := p.expectToken(lex.TOKEN_LBRACE, ok)
+	variants, ok := p.parseSumStrVariants()
+	rBrace, ok := p.expectToken(lex.TOKEN_RBRACE, ok)
 
 	return st.SumStr{
 		Keyword:    keyword,
@@ -115,12 +151,13 @@ func (p *parser) parseSumStr() (st.SumStr, error) {
 		LeftBrace:  lBrace,
 		Variants:   variants,
 		RightBrace: rBrace,
-	}, nil
+	}, ok
 
 }
 
-func (p *parser) parseSumStrVariants() ([]st.SumStrVariant, error) {
+func (p *parser) parseSumStrVariants() ([]st.SumStrVariant, bool) {
 	variants := []st.SumStrVariant{}
+	lastVariantOk := false
 	for {
 		id, ok := p.optionalToken(lex.TOKEN_ID)
 		if !ok {
@@ -129,125 +166,85 @@ func (p *parser) parseSumStrVariants() ([]st.SumStrVariant, error) {
 
 		jsonName := p.parseJsonRename()
 
-		separator, err := p.expectToken(lex.TOKEN_SEPARATOR)
-		if err != nil {
-			return nil, err
-		}
+		separator, ok := p.expectToken(lex.TOKEN_SEPARATOR, true)
+		lastVariantOk = ok
 
 		variants = append(variants, st.SumStrVariant{
 			Id:        id,
 			JsonName:  jsonName,
 			Separator: separator,
 		})
-
 	}
-	return variants, nil
+	return variants, lastVariantOk
 }
 
-func (p *parser) parseSum() (st.Sum, error) {
-	keyword, err := p.expectToken(lex.TOKEN_SUM)
-	if err != nil {
-		return st.Sum{}, err
-	}
-
-	id, err := p.expectToken(lex.TOKEN_ID)
-	if err != nil {
-		return st.Sum{}, err
-	}
-
-	lBrace, err := p.expectToken(lex.TOKEN_LBRACE)
-	if err != nil {
-		return st.Sum{}, err
-	}
-
-	fields, err := p.parseFields()
-	if err != nil {
-		return st.Sum{}, err
-	}
-
-	rBrace, err := p.expectToken(lex.TOKEN_RBRACE)
-	if err != nil {
-		return st.Sum{}, err
-	}
-
+func (p *parser) parseSum() (st.Sum, bool) {
+	keyword, ok := p.expectToken(lex.TOKEN_SUM, true)
+	id, ok := p.expectToken(lex.TOKEN_ID, ok)
+	lBrace, ok := p.expectToken(lex.TOKEN_LBRACE, ok)
+	fields, ok := p.parseFields()
+	rBrace, ok := p.expectToken(lex.TOKEN_RBRACE, ok)
 	return st.Sum{
 		Keyword:    keyword,
 		Id:         id,
 		LeftBrace:  lBrace,
 		Variants:   fields,
 		RightBrace: rBrace,
-	}, nil
+	}, ok
 }
 
-func (p *parser) parseProduct() (st.Product, error) {
-	keyword, err := p.expectToken(lex.TOKEN_PRODUCT)
-	if err != nil {
-		return st.Product{}, err
-	}
-
-	id, err := p.expectToken(lex.TOKEN_ID)
-	if err != nil {
-		return st.Product{}, err
-	}
-
-	lBrace, err := p.expectToken(lex.TOKEN_LBRACE)
-	if err != nil {
-		return st.Product{}, err
-	}
-
-	fields, err := p.parseFields()
-	if err != nil {
-		return st.Product{}, err
-	}
-
-	rBrace, err := p.expectToken(lex.TOKEN_RBRACE)
-	if err != nil {
-		return st.Product{}, err
-	}
-
+func (p *parser) parseProduct() (st.Product, bool) {
+	keyword, ok := p.expectToken(lex.TOKEN_PRODUCT, true)
+	id, ok := p.expectToken(lex.TOKEN_ID, ok)
+	lBrace, ok := p.expectToken(lex.TOKEN_LBRACE, ok)
+	fields, ok := p.parseFields()
+	rBrace, ok := p.expectToken(lex.TOKEN_RBRACE, ok)
 	return st.Product{
 		Keyword:    keyword,
 		LeftBrace:  lBrace,
 		Id:         id,
 		Fields:     fields,
 		RightBrace: rBrace,
-	}, nil
+	}, ok
 }
 
-func (p *parser) parseFields() ([]st.Field, error) {
+func (p *parser) parseFields() ([]st.Field, bool) {
 	fields := []st.Field{}
+	lastFieldOk := false
 	for {
 		currToken := p.currToken()
 		if currToken.Type != lex.TOKEN_ID {
 			break
 		}
-		field, err := p.parseField()
-		if err != nil {
-			return nil, err
-		}
+		field, ok := p.parseField()
+		lastFieldOk = ok
 		fields = append(fields, field)
 	}
-	return fields, nil
+	return fields, lastFieldOk
 }
 
-func (p *parser) parseField() (st.Field, error) {
-	id, err := p.expectToken(lex.TOKEN_ID)
-	if err != nil {
-		return st.Field{}, err
+func (p *parser) parseField() (st.Field, bool) {
+	id, ok := p.expectToken(lex.TOKEN_ID, true)
+
+	_, ok = p.expectTokens([]lex.TokenType{
+		lex.TOKEN_ID,
+		lex.TOKEN_LIST,
+		lex.TOKEN_LITERAL,
+		lex.TOKEN_OPTIONAL,
+		lex.TOKEN_SEPARATOR,
+	}, ok)
+
+	if !ok {
+		return st.Field{}, false
 	}
 
+	p.pos--
 	currToken := p.currToken()
+
 	if currToken.Type == lex.TOKEN_ID || currToken.Type == lex.TOKEN_LIST || currToken.Type == lex.TOKEN_LITERAL {
 		jsonName := p.parseJsonRename()
-		fieldType, err := p.parseType()
-		if err != nil {
-			return st.Field{}, err
-		}
-
-		separator, err := p.expectToken(lex.TOKEN_SEPARATOR)
-		if err != nil {
-			return st.Field{}, err
-		}
+		fieldType, ok := p.parseType()
+		separator, ok := p.expectToken(lex.TOKEN_SEPARATOR, ok)
 		return st.Field{
 			FieldFull: &st.FieldFull{
 				Id:        id,
@@ -255,78 +252,58 @@ func (p *parser) parseField() (st.Field, error) {
 				Type:      fieldType,
 				Separator: separator,
 			},
-		}, nil
+		}, ok
 	}
 	if currToken.Type == lex.TOKEN_OPTIONAL || currToken.Type == lex.TOKEN_SEPARATOR {
 		fieldNullable := p.parseNullability()
-
-		separator, err := p.expectToken(lex.TOKEN_SEPARATOR)
-		if err != nil {
-			return st.Field{}, err
-		}
+		separator, ok := p.expectToken(lex.TOKEN_SEPARATOR, true)
 		return st.Field{
 			FieldShort: &st.FieldShort{
 				Id:        id,
 				Nullable:  fieldNullable,
 				Separator: separator,
 			},
-		}, nil
+		}, ok
 	}
-
-	return st.Field{}, ExpectedTokenError(lex.TOKEN_SEPARATOR, p.currToken())
+	panic("Unreachable")
 }
 
-func (p *parser) parseTypeIdent() (st.TypeIdent, error) {
-	id, err := p.expectToken(lex.TOKEN_ID)
-	if err != nil {
-		return st.TypeIdent{}, err
-	}
+func (p *parser) parseTypeIdent() (st.TypeIdent, bool) {
+	id, ok := p.expectToken(lex.TOKEN_ID, true)
 	nullable := p.parseNullability()
-
 	return st.TypeIdent{
 		Id:       id,
 		Nullable: nullable,
-	}, nil
+	}, ok
 }
 
-func (p *parser) parseList() (st.List, error) {
-	brackets, err := p.expectToken(lex.TOKEN_LIST)
-	if err != nil {
-	}
+func (p *parser) parseList() (st.List, bool) {
+	brackets, ok := p.expectToken(lex.TOKEN_LIST, true)
 	nullable := p.parseNullability()
-	listType, err := p.parseType()
-	if err != nil {
-		return st.List{}, err
-	}
+	listType, ok := p.parseType()
 
 	return st.List{
 		Brackets: brackets,
 		Nullable: nullable,
 		Type:     listType,
-	}, nil
+	}, ok
 }
 
-func (p *parser) parseType() (st.Type, error) {
+func (p *parser) parseType() (st.Type, bool) {
 	switch p.currToken().Type {
 	case lex.TOKEN_ID:
-		typeIdent, err := p.parseTypeIdent()
-		if err != nil {
-			return st.Type{}, err
-		}
+		typeIdent, ok := p.parseTypeIdent()
 		return st.Type{
 			TypeIdent: &typeIdent,
-		}, nil
+		}, ok
 	case lex.TOKEN_LIST:
-		typeList, err := p.parseList()
-		if err != nil {
-			return st.Type{}, err
-		}
+		typeList, ok := p.parseList()
 		return st.Type{
 			List: &typeList,
-		}, nil
+		}, ok
 	default:
 	}
-	return st.Type{}, ExpectedTokenError(lex.TOKEN_ID, p.currToken())
+	return st.Type{}, false
 }
 
 func (p *parser) parseNullability() *lex.Token {
@@ -347,6 +324,8 @@ func (p *parser) parseJsonRename() *lex.Token {
 }
 
 func (p *parser) currToken() lex.Token {
+  if p.pos >= len(p.input) {
+    return lex.Token{IsErr: true}
+  }
 	return p.input[p.pos]
 }
-

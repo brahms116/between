@@ -17,7 +17,6 @@ const (
 	TOKEN_RBRACE
 	TOKEN_LIST
 	TOKEN_SEPARATOR
-
 	TOKEN_OPTIONAL
 )
 
@@ -47,6 +46,7 @@ type Token struct {
 	Type  TokenType
 	Value string
 	Loc   Location
+	IsErr bool
 }
 
 type lexer struct {

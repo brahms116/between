@@ -2,16 +2,19 @@ package parser
 
 import (
 	"encoding/json"
+	"github.com/stretchr/testify/assert"
 	"os"
 	"testing"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestParseSmoke(t *testing.T) {
 	data, err := os.ReadFile("../../testcases/001.bt")
 	assert.Nil(t, err)
-	defintions, err := LexAndParse(string(data))
-	assert.Nil(t, err)
+	defintions, errs := LexAndParse(string(data))
+	assert.Equal(t, 0, len(errs))
+  for _, err := range errs {
+    t.Log(err)
+  }
 	bytes, err := json.MarshalIndent(defintions, "", "  ")
-	println(string(bytes))
+	println(len(bytes))
 }
