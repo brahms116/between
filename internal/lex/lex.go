@@ -18,6 +18,7 @@ const (
 	TOKEN_LIST
 	TOKEN_SEPARATOR
 	TOKEN_OPTIONAL
+	TOKEN_EOF
 )
 
 var stringToToken map[string]TokenType = map[string]TokenType{
@@ -61,14 +62,20 @@ type lexer struct {
 	lastRowEnd int
 
 	tokens []Token
+	errs   []error
 }
 
-func Lex(input string) ([]Token, error) {
+func Lex(input string) ([]Token, []error) {
 	lexer := &lexer{input: input}
-	return lexer.Lex()
+	lexer.Lex()
+	return lexer.tokens, lexer.errs
 }
 
-func (l *lexer) Lex() ([]Token, error) {
+func (l *lexer) err(err error) {
+	l.errs = append(l.errs, err)
+}
+
+func (l *lexer) Lex() {
 
 	for {
 		currChar := l.next()
@@ -99,19 +106,18 @@ func (l *lexer) Lex() ([]Token, error) {
 			{
 				currChar = l.next()
 				if currChar == nil {
-					return nil, fmt.Errorf("Unexpected EOF")
+					l.err(fmt.Errorf("Unexpected EOF, expected ']' at %d", l.currPos))
+					continue
 				}
 				if *currChar != ']' {
-					return nil, fmt.Errorf("Expected ']' at pos %d", l.currPos)
+					l.err(fmt.Errorf("Unexpected char %s, expected ']' at %d", string(*currChar), l.currPos))
+					continue
 				}
 				l.acceptToken(TOKEN_LIST)
 				continue
 			}
 		case '"':
-			err := l.lexLiteral()
-			if err != nil {
-				return nil, err
-			}
+			l.lexLiteral()
 			continue
 		default:
 		}
@@ -120,23 +126,22 @@ func (l *lexer) Lex() ([]Token, error) {
 			l.lexAlphaNum()
 			continue
 		}
-
-		return nil, fmt.Errorf("Unexpected char %s at %d", string(*currChar), l.currPos)
+		l.err(fmt.Errorf("Unexpected char %s at %d", string(*currChar), l.currPos))
 	}
-	return l.tokens, nil
+
+	l.acceptToken(TOKEN_EOF)
 }
 
-func (l *lexer) lexLiteral() error {
+func (l *lexer) lexLiteral() {
 	l.eatWhile(func(b rune) bool {
 		return b != '"'
 	})
 	next := l.next()
 	if next == nil {
-		return fmt.Errorf("Unexpected EOF, expected '\"' at %d", l.currPos)
+		l.err(fmt.Errorf("Unexpected EOF, expected '\"' at %d", l.currPos))
 	}
 	str := l.currString()
 	l.acceptTokenWithValue(TOKEN_LITERAL, str[1:len(str)-1])
-	return nil
 }
 
 func (l *lexer) lexWhitespace() {

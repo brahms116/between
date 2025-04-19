@@ -33,6 +33,21 @@ var cases []testCase = []testCase{
 					},
 				},
 			},
+			{
+				Type: TOKEN_EOF,
+				Loc: Location{
+					ByteStart: 4,
+					ByteEnd:   4,
+					Start: Point{
+						Row: 0,
+						Col: 4,
+					},
+					End: Point{
+						Row: 0,
+						Col: 4,
+					},
+				},
+			},
 		},
 	},
 	{
@@ -47,6 +62,21 @@ var cases []testCase = []testCase{
 					Start: Point{
 						Row: 0,
 						Col: 0,
+					},
+					End: Point{
+						Row: 0,
+						Col: 4,
+					},
+				},
+			},
+			{
+				Type: TOKEN_EOF,
+				Loc: Location{
+					ByteStart: 4,
+					ByteEnd:   4,
+					Start: Point{
+						Row: 0,
+						Col: 4,
 					},
 					End: Point{
 						Row: 0,
@@ -69,13 +99,13 @@ func TestLex(t *testing.T) {
 func TestSmokeLex(t *testing.T) {
 	data, err := os.ReadFile("../../testcases/001.bt")
 	assert.Nil(t, err)
-	tokens, err := Lex(string(data))
-	assert.Nil(t, err)
+	tokens, errs := Lex(string(data))
+	assert.Nil(t, errs)
 	for _, token := range tokens {
-    jsonStr, err := json.MarshalIndent(token, "", "  ")
-    if err != nil {
-      t.Fatal(err)
-    }
-    log.Print(string(jsonStr))
+		jsonStr, err := json.MarshalIndent(token, "", "  ")
+		if err != nil {
+			t.Fatal(err)
+		}
+		log.Print(string(jsonStr))
 	}
 }

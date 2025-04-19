@@ -38,11 +38,12 @@ func EOFError() error {
 }
 
 func LexAndParse(input string) ([]st.Definition, []error) {
-	tokens, err := lex.Lex(input)
-	if err != nil {
-		return nil, []error{err}
-	}
-	return Parse(tokens)
+	tokens, lexErrs := lex.Lex(input)
+	d, parseErrs := Parse(tokens)
+	var errs []error
+	errs = append(errs, lexErrs...)
+	errs = append(errs, parseErrs...)
+	return d, errs
 }
 
 func Parse(input []lex.Token) ([]st.Definition, []error) {
@@ -54,7 +55,7 @@ func Parse(input []lex.Token) ([]st.Definition, []error) {
 func (p *parser) parse() ([]st.Definition, bool) {
 	definitions := []st.Definition{}
 	lastDefinitionOk := false
-	for p.pos < len(p.input) {
+	for p.currToken().Type != lex.TOKEN_EOF {
 		definition, ok := p.parseDefinition()
 		lastDefinitionOk = ok
 		definitions = append(definitions, definition)
@@ -324,8 +325,8 @@ func (p *parser) parseJsonRename() *lex.Token {
 }
 
 func (p *parser) currToken() lex.Token {
-  if p.pos >= len(p.input) {
-    return lex.Token{IsErr: true}
-  }
+	if p.pos >= len(p.input) {
+		return p.input[len(p.input)-1]
+	}
 	return p.input[p.pos]
 }
