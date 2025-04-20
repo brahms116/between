@@ -54,9 +54,9 @@ func Parse(input []lex.Token) ([]st.Definition, []error) {
 
 func (p *parser) parse() ([]st.Definition, bool) {
 	definitions := []st.Definition{}
-	lastDefinitionOk := false
+	lastDefinitionOk := true
 	for p.currToken().Type != lex.TOKEN_EOF {
-		definition, ok := p.parseDefinition()
+		definition, ok := p.parseDefinition(lastDefinitionOk)
 		lastDefinitionOk = ok
 		definitions = append(definitions, definition)
 	}
@@ -67,18 +67,12 @@ func (p *parser) appendErr(err error) {
 	p.errors = append(p.errors, err)
 }
 
-func (p *parser) expectToken(tokenType lex.TokenType, immediateNext bool) (lex.Token, bool) {
-	return p.expectTokens([]lex.TokenType{tokenType}, immediateNext)
-}
-
-func (p *parser) expectTokens(tokenTypes []lex.TokenType, immediateNext bool) (lex.Token, bool) {
-	if p.pos >= len(p.input) {
+func (p *parser) advance(tokenTypes []lex.TokenType, shouldFailImmediately, shouldConsumeToken bool) (lex.Token, bool) {
+	if p.currToken().Type == lex.TOKEN_EOF {
 		p.appendErr(EOFError())
 		return lex.Token{IsErr: true}, false
 	}
-
 	currToken := p.currToken()
-	p.pos++
 	found := false
 	for _, tokenType := range tokenTypes {
 		if currToken.Type == tokenType {
@@ -87,22 +81,30 @@ func (p *parser) expectTokens(tokenTypes []lex.TokenType, immediateNext bool) (l
 		}
 	}
 
-	if !found {
-		if immediateNext {
-			p.appendErr(ExpectedTokenError(tokenTypes, currToken))
-			return lex.Token{
-				IsErr: true,
-			}, false
+	if found {
+		if shouldConsumeToken {
+			p.pos++
 		}
-		return p.expectTokens(tokenTypes, false)
+		return currToken, true
 	}
-	return currToken, true
+
+	if shouldFailImmediately {
+		p.appendErr(ExpectedTokenError(tokenTypes, currToken))
+		return lex.Token{IsErr: true}, false
+	}
+	p.pos++
+	return p.advance(tokenTypes, false, true)
 }
 
-func (p *parser) optionalToken(tokenType lex.TokenType) (lex.Token, bool) {
-	if p.pos >= len(p.input) {
-		return lex.Token{}, false
-	}
+func (p *parser) expectToken(tokenType lex.TokenType, shouldImmediatelyFail bool) (lex.Token, bool) {
+	return p.advance([]lex.TokenType{tokenType}, shouldImmediatelyFail, true)
+}
+
+func (p *parser) eatUntilOneOf(tokenTypes []lex.TokenType, shouldImmediatelyFail bool) (lex.Token, bool) {
+	return p.advance(tokenTypes, shouldImmediatelyFail, false)
+}
+
+func (p *parser) optionalNextToken(tokenType lex.TokenType) (lex.Token, bool) {
 	currToken := p.currToken()
 	if currToken.Type == tokenType {
 		p.pos++
@@ -111,18 +113,16 @@ func (p *parser) optionalToken(tokenType lex.TokenType) (lex.Token, bool) {
 	return lex.Token{}, false
 }
 
-func (p *parser) parseDefinition() (st.Definition, bool) {
-
-	currToken, ok := p.expectTokens([]lex.TokenType{
+func (p *parser) parseDefinition(prevOk bool) (st.Definition, bool) {
+	currToken, ok := p.eatUntilOneOf([]lex.TokenType{
 		lex.TOKEN_PRODUCT,
 		lex.TOKEN_SUM,
 		lex.TOKEN_SUM_STR,
-	}, true)
+	}, prevOk)
 
 	if !ok {
 		return st.Definition{}, false
 	}
-	p.pos--
 
 	switch currToken.Type {
 	case lex.TOKEN_PRODUCT:
@@ -160,7 +160,7 @@ func (p *parser) parseSumStrVariants() ([]st.SumStrVariant, bool) {
 	variants := []st.SumStrVariant{}
 	lastVariantOk := false
 	for {
-		id, ok := p.optionalToken(lex.TOKEN_ID)
+		id, ok := p.optionalNextToken(lex.TOKEN_ID)
 		if !ok {
 			break
 		}
@@ -211,23 +211,23 @@ func (p *parser) parseProduct() (st.Product, bool) {
 
 func (p *parser) parseFields() ([]st.Field, bool) {
 	fields := []st.Field{}
-	lastFieldOk := false
+	lastFieldOk := true
 	for {
 		currToken := p.currToken()
 		if currToken.Type != lex.TOKEN_ID {
 			break
 		}
-		field, ok := p.parseField()
+		field, ok := p.parseField(lastFieldOk)
 		lastFieldOk = ok
 		fields = append(fields, field)
 	}
 	return fields, lastFieldOk
 }
 
-func (p *parser) parseField() (st.Field, bool) {
+func (p *parser) parseField(prevOk bool) (st.Field, bool) {
 	id, ok := p.expectToken(lex.TOKEN_ID, true)
 
-	_, ok = p.expectTokens([]lex.TokenType{
+	_, ok = p.eatUntilOneOf([]lex.TokenType{
 		lex.TOKEN_ID,
 		lex.TOKEN_LIST,
 		lex.TOKEN_LITERAL,
@@ -239,7 +239,6 @@ func (p *parser) parseField() (st.Field, bool) {
 		return st.Field{}, false
 	}
 
-	p.pos--
 	currToken := p.currToken()
 
 	if currToken.Type == lex.TOKEN_ID || currToken.Type == lex.TOKEN_LIST || currToken.Type == lex.TOKEN_LITERAL {
@@ -308,7 +307,7 @@ func (p *parser) parseType() (st.Type, bool) {
 }
 
 func (p *parser) parseNullability() *lex.Token {
-	nullable, ok := p.optionalToken(lex.TOKEN_OPTIONAL)
+	nullable, ok := p.optionalNextToken(lex.TOKEN_OPTIONAL)
 	if ok {
 		return &nullable
 	}
