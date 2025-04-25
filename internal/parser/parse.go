@@ -48,19 +48,46 @@ func LexAndParse(input string) ([]st.Definition, []error) {
 
 func Parse(input []lex.Token) ([]st.Definition, []error) {
 	p := &parser{input: input}
-	definitions, _ := p.parse()
+	definitions := p.parse()
 	return definitions, p.errors
 }
 
-func (p *parser) parse() ([]st.Definition, bool) {
+func (p *parser) parse() ([]st.Definition) {
 	definitions := []st.Definition{}
 	lastDefinitionOk := true
-	for p.currToken().Type != lex.TOKEN_EOF {
-		definition, ok := p.parseDefinition(lastDefinitionOk)
+	for {
+		if lastDefinitionOk {
+			currToken, ok := p.eatUntilOneOf([]lex.TokenType{
+				lex.TOKEN_PRODUCT,
+				lex.TOKEN_SUM,
+				lex.TOKEN_SUM_STR,
+				lex.TOKEN_EOF,
+			}, true)
+
+			if !ok {
+				lastDefinitionOk = false
+				continue
+			}
+
+			if currToken.Type == lex.TOKEN_EOF {
+				return definitions
+			}
+		} else {
+			currToken, _ := p.eatUntilOneOf([]lex.TokenType{
+				lex.TOKEN_PRODUCT,
+				lex.TOKEN_SUM,
+				lex.TOKEN_SUM_STR,
+				lex.TOKEN_EOF,
+			}, false)
+
+      if currToken.Type == lex.TOKEN_EOF {
+        return definitions
+      }
+    }
+		definition, ok := p.parseDefinition()
 		lastDefinitionOk = ok
 		definitions = append(definitions, definition)
 	}
-	return definitions, lastDefinitionOk
 }
 
 func (p *parser) appendErr(err error) {
@@ -68,10 +95,6 @@ func (p *parser) appendErr(err error) {
 }
 
 func (p *parser) advance(tokenTypes []lex.TokenType, shouldFailImmediately, shouldConsumeToken bool) (lex.Token, bool) {
-	if p.currToken().Type == lex.TOKEN_EOF {
-		p.appendErr(EOFError())
-		return lex.Token{IsErr: true}, false
-	}
 	currToken := p.currToken()
 	found := false
 	for _, tokenType := range tokenTypes {
@@ -87,6 +110,11 @@ func (p *parser) advance(tokenTypes []lex.TokenType, shouldFailImmediately, shou
 		}
 		return currToken, true
 	}
+
+  if currToken.Type == lex.TOKEN_EOF {
+    p.appendErr(EOFError())
+    return lex.Token{IsErr: true}, false
+  }
 
 	if shouldFailImmediately {
 		p.appendErr(ExpectedTokenError(tokenTypes, currToken))
@@ -113,12 +141,12 @@ func (p *parser) optionalNextToken(tokenType lex.TokenType) (lex.Token, bool) {
 	return lex.Token{}, false
 }
 
-func (p *parser) parseDefinition(prevOk bool) (st.Definition, bool) {
+func (p *parser) parseDefinition() (st.Definition, bool) {
 	currToken, ok := p.eatUntilOneOf([]lex.TokenType{
 		lex.TOKEN_PRODUCT,
 		lex.TOKEN_SUM,
 		lex.TOKEN_SUM_STR,
-	}, prevOk)
+	}, true)
 
 	if !ok {
 		return st.Definition{}, false
