@@ -94,6 +94,7 @@ func (p *parser) advance(tokenTypes []lex.TokenType, shouldFailImmediately, shou
 	}
 	p.pos++
 	return p.advance(tokenTypes, false, true)
+	return p.advance(tokenTypes, shouldFailImmediately, shouldConsumeToken)
 }
 
 func (p *parser) expectToken(tokenType lex.TokenType, shouldImmediatelyFail bool) (lex.Token, bool) {
