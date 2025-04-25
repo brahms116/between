@@ -93,7 +93,6 @@ func (p *parser) advance(tokenTypes []lex.TokenType, shouldFailImmediately, shou
 		return lex.Token{IsErr: true}, false
 	}
 	p.pos++
-	return p.advance(tokenTypes, false, true)
 	return p.advance(tokenTypes, shouldFailImmediately, shouldConsumeToken)
 }
 
@@ -214,18 +213,29 @@ func (p *parser) parseFields() ([]st.Field, bool) {
 	fields := []st.Field{}
 	lastFieldOk := true
 	for {
-		currToken := p.currToken()
-		if currToken.Type != lex.TOKEN_ID {
-			break
+		if lastFieldOk {
+			if p.currToken().Type != lex.TOKEN_ID {
+				return fields, p.currToken().Type == lex.TOKEN_RBRACE
+			}
+		} else {
+			currentToken, ok := p.eatUntilOneOf([]lex.TokenType{
+				lex.TOKEN_LBRACE,
+				lex.TOKEN_ID,
+			}, false)
+			if !ok {
+				return fields, false
+			}
+			if currentToken.Type == lex.TOKEN_LBRACE {
+				return fields, true
+			}
 		}
-		field, ok := p.parseField(lastFieldOk)
+		field, ok := p.parseField()
 		lastFieldOk = ok
 		fields = append(fields, field)
 	}
-	return fields, lastFieldOk
 }
 
-func (p *parser) parseField(prevOk bool) (st.Field, bool) {
+func (p *parser) parseField() (st.Field, bool) {
 	id, ok := p.expectToken(lex.TOKEN_ID, true)
 
 	_, ok = p.eatUntilOneOf([]lex.TokenType{
