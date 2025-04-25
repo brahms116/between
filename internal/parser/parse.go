@@ -160,14 +160,27 @@ func (p *parser) parseSumStrVariants() ([]st.SumStrVariant, bool) {
 	variants := []st.SumStrVariant{}
 	lastVariantOk := false
 	for {
-		id, ok := p.optionalNextToken(lex.TOKEN_ID)
-		if !ok {
-			break
+		if lastVariantOk {
+			if p.currToken().Type != lex.TOKEN_ID {
+				return variants, p.currToken().Type == lex.TOKEN_RBRACE
+			}
+		} else {
+			currentToken, ok := p.eatUntilOneOf([]lex.TokenType{
+				lex.TOKEN_ID,
+				lex.TOKEN_LBRACE,
+			}, false)
+			if !ok {
+				return variants, false
+			}
+			if currentToken.Type == lex.TOKEN_LBRACE {
+				return variants, true
+			}
 		}
 
+		id, ok := p.expectToken(lex.TOKEN_ID, true)
 		jsonName := p.parseJsonRename()
 
-		separator, ok := p.expectToken(lex.TOKEN_SEPARATOR, true)
+		separator, ok := p.expectToken(lex.TOKEN_SEPARATOR, ok)
 		lastVariantOk = ok
 
 		variants = append(variants, st.SumStrVariant{
@@ -176,7 +189,6 @@ func (p *parser) parseSumStrVariants() ([]st.SumStrVariant, bool) {
 			Separator: separator,
 		})
 	}
-	return variants, lastVariantOk
 }
 
 func (p *parser) parseSum() (st.Sum, bool) {
