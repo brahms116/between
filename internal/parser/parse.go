@@ -11,6 +11,8 @@ type parser struct {
 	input  []lex.Token
 	pos    int
 	errors []error
+
+	isEofError bool
 }
 
 const NUM_TYPE_STRING = "Num"
@@ -52,7 +54,7 @@ func Parse(input []lex.Token) ([]st.Definition, []error) {
 	return definitions, p.errors
 }
 
-func (p *parser) parse() ([]st.Definition) {
+func (p *parser) parse() []st.Definition {
 	definitions := []st.Definition{}
 	lastDefinitionOk := true
 	for {
@@ -80,10 +82,10 @@ func (p *parser) parse() ([]st.Definition) {
 				lex.TOKEN_EOF,
 			}, false)
 
-      if currToken.Type == lex.TOKEN_EOF {
-        return definitions
-      }
-    }
+			if currToken.Type == lex.TOKEN_EOF {
+				return definitions
+			}
+		}
 		definition, ok := p.parseDefinition()
 		lastDefinitionOk = ok
 		definitions = append(definitions, definition)
@@ -111,10 +113,10 @@ func (p *parser) advance(tokenTypes []lex.TokenType, shouldFailImmediately, shou
 		return currToken, true
 	}
 
-  if currToken.Type == lex.TOKEN_EOF {
-    p.appendErr(EOFError())
-    return lex.Token{IsErr: true}, false
-  }
+	if currToken.Type == lex.TOKEN_EOF {
+		p.appendErr(EOFError())
+		return lex.Token{IsErr: true}, false
+	}
 
 	if shouldFailImmediately {
 		p.appendErr(ExpectedTokenError(tokenTypes, currToken))
@@ -122,6 +124,38 @@ func (p *parser) advance(tokenTypes []lex.TokenType, shouldFailImmediately, shou
 	}
 	p.pos++
 	return p.advance(tokenTypes, shouldFailImmediately, shouldConsumeToken)
+}
+
+func (p *parser) expect(tokenType lex.TokenType, follow []lex.TokenType) lex.Token {
+	token, _ := p.expectOneOf([]lex.TokenType{tokenType}, follow)
+	return token
+}
+
+func (p *parser) expectOneOf(tokenTypes []lex.TokenType, follow []lex.TokenType) (lex.Token, bool) {
+	currToken := p.currToken()
+	for _, tokenType := range tokenTypes {
+		if currToken.Type == tokenType {
+			p.pos++
+			return currToken, true
+		}
+	}
+
+	if !p.isEofError {
+		p.appendErr(ExpectedTokenError(tokenTypes, currToken))
+	}
+
+	for {
+		for _, tokenType := range follow {
+			if currToken.Type == tokenType {
+				return lex.Token{IsErr: true}, false
+			}
+		}
+		if currToken.Type == lex.TOKEN_EOF {
+			p.isEofError = true
+			return lex.Token{IsErr: true}, false
+		}
+		p.pos++
+	}
 }
 
 func (p *parser) expectToken(tokenType lex.TokenType, shouldImmediatelyFail bool) (lex.Token, bool) {
@@ -142,11 +176,17 @@ func (p *parser) optionalNextToken(tokenType lex.TokenType) (lex.Token, bool) {
 }
 
 func (p *parser) parseDefinition() (st.Definition, bool) {
-	currToken, ok := p.eatUntilOneOf([]lex.TokenType{
-		lex.TOKEN_PRODUCT,
-		lex.TOKEN_SUM,
-		lex.TOKEN_SUM_STR,
-	}, true)
+
+  currToken, ok := p.expectOneOf([]lex.TokenType{
+    lex.TOKEN_PRODUCT,
+    lex.TOKEN_SUM,
+    lex.TOKEN_SUM_STR,
+  }, []lex.TokenType{
+    lex.TOKEN_EOF,
+    lex.TOKEN_PRODUCT,
+    lex.TOKEN_SUM,
+    lex.TOKEN_SUM_STR,
+  })
 
 	if !ok {
 		return st.Definition{}, false
