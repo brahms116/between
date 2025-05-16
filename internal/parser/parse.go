@@ -50,120 +50,43 @@ func LexAndParse(input string) ([]st.Definition, []error) {
 
 func Parse(input []lex.Token) ([]st.Definition, []error) {
 	p := &parser{input: input}
-	definitions := p.parse()
+	definitions := p.parseDefinitions()
 	return definitions, p.errors
-}
-
-func (p *parser) parse() []st.Definition {
-	definitions := []st.Definition{}
-	lastDefinitionOk := true
-	for {
-		if lastDefinitionOk {
-			currToken, ok := p.eatUntilOneOf([]lex.TokenType{
-				lex.TOKEN_PRODUCT,
-				lex.TOKEN_SUM,
-				lex.TOKEN_SUM_STR,
-				lex.TOKEN_EOF,
-			}, true)
-
-			if !ok {
-				lastDefinitionOk = false
-				continue
-			}
-
-			if currToken.Type == lex.TOKEN_EOF {
-				return definitions
-			}
-		} else {
-			currToken, _ := p.eatUntilOneOf([]lex.TokenType{
-				lex.TOKEN_PRODUCT,
-				lex.TOKEN_SUM,
-				lex.TOKEN_SUM_STR,
-				lex.TOKEN_EOF,
-			}, false)
-
-			if currToken.Type == lex.TOKEN_EOF {
-				return definitions
-			}
-		}
-		definition, ok := p.parseDefinition()
-		lastDefinitionOk = ok
-		definitions = append(definitions, definition)
-	}
 }
 
 func (p *parser) appendErr(err error) {
 	p.errors = append(p.errors, err)
 }
 
-func (p *parser) advance(tokenTypes []lex.TokenType, shouldFailImmediately, shouldConsumeToken bool) (lex.Token, bool) {
-	currToken := p.currToken()
-	found := false
-	for _, tokenType := range tokenTypes {
-		if currToken.Type == tokenType {
-			found = true
-			break
-		}
-	}
-
-	if found {
-		if shouldConsumeToken {
-			p.pos++
-		}
-		return currToken, true
-	}
-
-	if currToken.Type == lex.TOKEN_EOF {
-		p.appendErr(EOFError())
-		return lex.Token{IsErr: true}, false
-	}
-
-	if shouldFailImmediately {
-		p.appendErr(ExpectedTokenError(tokenTypes, currToken))
-		return lex.Token{IsErr: true}, false
-	}
-	p.pos++
-	return p.advance(tokenTypes, shouldFailImmediately, shouldConsumeToken)
-}
-
 func (p *parser) expect(tokenType lex.TokenType, follow []lex.TokenType) lex.Token {
-	token, _ := p.expectOneOf([]lex.TokenType{tokenType}, follow)
-	return token
+	currToken := p.currToken()
+	if currToken.Type == tokenType {
+		p.pos++
+		return currToken
+	}
+	p.errorUntil([]lex.TokenType{tokenType}, follow)
+	return lex.Token{IsErr: true}
 }
 
-func (p *parser) expectOneOf(tokenTypes []lex.TokenType, follow []lex.TokenType) (lex.Token, bool) {
-	currToken := p.currToken()
-	for _, tokenType := range tokenTypes {
-		if currToken.Type == tokenType {
-			p.pos++
-			return currToken, true
-		}
-	}
-
+func (p *parser) errorUntil(expectedTokens []lex.TokenType, follow []lex.TokenType) {
 	if !p.isEofError {
-		p.appendErr(ExpectedTokenError(tokenTypes, currToken))
+		p.appendErr(ExpectedTokenError(expectedTokens, p.currToken()))
 	}
 
+outer:
 	for {
+		currToken := p.currToken()
 		for _, tokenType := range follow {
 			if currToken.Type == tokenType {
-				return lex.Token{IsErr: true}, false
+				break outer
 			}
 		}
 		if currToken.Type == lex.TOKEN_EOF {
 			p.isEofError = true
-			return lex.Token{IsErr: true}, false
+			break outer
 		}
 		p.pos++
 	}
-}
-
-func (p *parser) expectToken(tokenType lex.TokenType, shouldImmediatelyFail bool) (lex.Token, bool) {
-	return p.advance([]lex.TokenType{tokenType}, shouldImmediatelyFail, true)
-}
-
-func (p *parser) eatUntilOneOf(tokenTypes []lex.TokenType, shouldImmediatelyFail bool) (lex.Token, bool) {
-	return p.advance(tokenTypes, shouldImmediatelyFail, false)
 }
 
 func (p *parser) optionalNextToken(tokenType lex.TokenType) (lex.Token, bool) {
@@ -175,44 +98,51 @@ func (p *parser) optionalNextToken(tokenType lex.TokenType) (lex.Token, bool) {
 	return lex.Token{}, false
 }
 
-func (p *parser) parseDefinition() (st.Definition, bool) {
-
-  currToken, ok := p.expectOneOf([]lex.TokenType{
-    lex.TOKEN_PRODUCT,
-    lex.TOKEN_SUM,
-    lex.TOKEN_SUM_STR,
-  }, []lex.TokenType{
-    lex.TOKEN_EOF,
-    lex.TOKEN_PRODUCT,
-    lex.TOKEN_SUM,
-    lex.TOKEN_SUM_STR,
-  })
-
-	if !ok {
-		return st.Definition{}, false
-	}
-
-	switch currToken.Type {
-	case lex.TOKEN_PRODUCT:
-		prod, ok := p.parseProduct()
-		return st.Definition{Product: &prod}, ok
-	case lex.TOKEN_SUM:
-		sum, ok := p.parseSum()
-		return st.Definition{Sum: &sum}, ok
-	case lex.TOKEN_SUM_STR:
-		sumStr, ok := p.parseSumStr()
-		return st.Definition{SumStr: &sumStr}, ok
-	default:
-		panic("Unreachable")
+func (p *parser) parseDefinitions() []st.Definition {
+	definitions := []st.Definition{}
+	for {
+		if p.currToken().Type == lex.TOKEN_EOF {
+			return definitions
+		}
+		definitions = append(definitions, p.parseDefinition())
 	}
 }
 
-func (p *parser) parseSumStr() (st.SumStr, bool) {
-	keyword, ok := p.expectToken(lex.TOKEN_SUM_STR, true)
-	id, ok := p.expectToken(lex.TOKEN_ID, ok)
-	lBrace, ok := p.expectToken(lex.TOKEN_LBRACE, ok)
-	variants, ok := p.parseSumStrVariants()
-	rBrace, ok := p.expectToken(lex.TOKEN_RBRACE, ok)
+var definitionFirsts = []lex.TokenType{
+	productFirst,
+	sumFirst,
+}
+
+var definitionFollows = append(definitionFirsts, []lex.TokenType{
+	lex.TOKEN_EOF,
+}...)
+
+func (p *parser) parseDefinition() st.Definition {
+	switch p.currToken().Type {
+	case lex.TOKEN_PRODUCT:
+		prod := p.parseProduct()
+		return st.Definition{Product: &prod}
+	case lex.TOKEN_SUM:
+		sum := p.parseSum()
+		return st.Definition{Sum: &sum}
+	case lex.TOKEN_SUM_STR:
+		sumStr := p.parseSumStr()
+		return st.Definition{SumStr: &sumStr}
+	default:
+		p.errorUntil(definitionFirsts, definitionFollows)
+		return st.Definition{}
+	}
+}
+
+var sumStrFirst = lex.TOKEN_SUM_STR
+var sumStrFollows = definitionFollows
+
+func (p *parser) parseSumStr() st.SumStr {
+	keyword := p.expect(lex.TOKEN_SUM_STR, []lex.TokenType{lex.TOKEN_ID})
+	id := p.expect(lex.TOKEN_ID, []lex.TokenType{lex.TOKEN_LBRACE})
+	lBrace := p.expect(lex.TOKEN_LBRACE, []lex.TokenType{sumStrVariantsFirst, sumStrVariantsFollow})
+	variants := p.parseSumStrVariants()
+	rBrace := p.expect(lex.TOKEN_RBRACE, sumStrFollows)
 
 	return st.SumStr{
 		Keyword:    keyword,
@@ -220,122 +150,114 @@ func (p *parser) parseSumStr() (st.SumStr, bool) {
 		LeftBrace:  lBrace,
 		Variants:   variants,
 		RightBrace: rBrace,
-	}, ok
-
-}
-
-func (p *parser) parseSumStrVariants() ([]st.SumStrVariant, bool) {
-	variants := []st.SumStrVariant{}
-	lastVariantOk := false
-	for {
-		if lastVariantOk {
-			if p.currToken().Type != lex.TOKEN_ID {
-				return variants, p.currToken().Type == lex.TOKEN_RBRACE
-			}
-		} else {
-			currentToken, ok := p.eatUntilOneOf([]lex.TokenType{
-				lex.TOKEN_ID,
-				lex.TOKEN_LBRACE,
-			}, false)
-			if !ok {
-				return variants, false
-			}
-			if currentToken.Type == lex.TOKEN_LBRACE {
-				return variants, true
-			}
-		}
-
-		id, ok := p.expectToken(lex.TOKEN_ID, true)
-		jsonName := p.parseJsonRename()
-
-		separator, ok := p.expectToken(lex.TOKEN_SEPARATOR, ok)
-		lastVariantOk = ok
-
-		variants = append(variants, st.SumStrVariant{
-			Id:        id,
-			JsonName:  jsonName,
-			Separator: separator,
-		})
 	}
 }
 
-func (p *parser) parseSum() (st.Sum, bool) {
-	keyword, ok := p.expectToken(lex.TOKEN_SUM, true)
-	id, ok := p.expectToken(lex.TOKEN_ID, ok)
-	lBrace, ok := p.expectToken(lex.TOKEN_LBRACE, ok)
-	fields, ok := p.parseFields()
-	rBrace, ok := p.expectToken(lex.TOKEN_RBRACE, ok)
+var sumStrVariantsFirst = sumStrVariantFirst
+var sumStrVariantsFollow = lex.TOKEN_RBRACE
+
+var sumStrVariantFirst = lex.TOKEN_ID
+var sumStrVariantFollows = []lex.TokenType{
+	sumStrVariantsFollow,
+	sumStrVariantFirst,
+}
+
+func (p *parser) parseSumStrVariants() []st.SumStrVariant {
+	variants := []st.SumStrVariant{}
+	for {
+		switch p.currToken().Type {
+		case lex.TOKEN_ID:
+			id := p.expect(lex.TOKEN_ID, []lex.TokenType{lex.TOKEN_SEPARATOR, lex.TOKEN_SEPARATOR})
+			jsonName := p.parseJsonRename()
+			separator := p.expect(lex.TOKEN_SEPARATOR, sumStrVariantFollows)
+			variants = append(variants, st.SumStrVariant{
+				Id:        id,
+				JsonName:  jsonName,
+				Separator: separator,
+			})
+		case sumStrVariantsFollow:
+			return variants
+		default:
+			p.errorUntil([]lex.TokenType{sumStrVariantsFirst, sumStrVariantsFollow}, []lex.TokenType{sumStrVariantsFollow})
+			return variants
+		}
+	}
+}
+
+var sumFirst = lex.TOKEN_SUM
+var sumFollows = definitionFollows
+
+func (p *parser) parseSum() st.Sum {
+	keyword := p.expect(lex.TOKEN_SUM, []lex.TokenType{lex.TOKEN_ID})
+	id := p.expect(lex.TOKEN_ID, []lex.TokenType{lex.TOKEN_LBRACE})
+	lBrace := p.expect(lex.TOKEN_LBRACE, []lex.TokenType{fieldsFirst, lex.TOKEN_RBRACE})
+	fields := p.parseFields()
+	rBrace := p.expect(lex.TOKEN_RBRACE, sumFollows)
 	return st.Sum{
 		Keyword:    keyword,
 		Id:         id,
 		LeftBrace:  lBrace,
 		Variants:   fields,
 		RightBrace: rBrace,
-	}, ok
+	}
 }
 
-func (p *parser) parseProduct() (st.Product, bool) {
-	keyword, ok := p.expectToken(lex.TOKEN_PRODUCT, true)
-	id, ok := p.expectToken(lex.TOKEN_ID, ok)
-	lBrace, ok := p.expectToken(lex.TOKEN_LBRACE, ok)
-	fields, ok := p.parseFields()
-	rBrace, ok := p.expectToken(lex.TOKEN_RBRACE, ok)
+var productFirst = lex.TOKEN_PRODUCT
+var productFollows = definitionFollows
+
+func (p *parser) parseProduct() st.Product {
+	keyword := p.expect(lex.TOKEN_PRODUCT, []lex.TokenType{lex.TOKEN_ID})
+	id := p.expect(lex.TOKEN_ID, []lex.TokenType{lex.TOKEN_LBRACE})
+	lBrace := p.expect(lex.TOKEN_LBRACE, []lex.TokenType{lex.TOKEN_ID})
+	fields := p.parseFields()
+	rBrace := p.expect(lex.TOKEN_RBRACE, definitionFollows)
 	return st.Product{
 		Keyword:    keyword,
 		LeftBrace:  lBrace,
 		Id:         id,
 		Fields:     fields,
 		RightBrace: rBrace,
-	}, ok
-}
-
-func (p *parser) parseFields() ([]st.Field, bool) {
-	fields := []st.Field{}
-	lastFieldOk := true
-	for {
-		if lastFieldOk {
-			if p.currToken().Type != lex.TOKEN_ID {
-				return fields, p.currToken().Type == lex.TOKEN_RBRACE
-			}
-		} else {
-			currentToken, ok := p.eatUntilOneOf([]lex.TokenType{
-				lex.TOKEN_LBRACE,
-				lex.TOKEN_ID,
-			}, false)
-			if !ok {
-				return fields, false
-			}
-			if currentToken.Type == lex.TOKEN_LBRACE {
-				return fields, true
-			}
-		}
-		field, ok := p.parseField()
-		lastFieldOk = ok
-		fields = append(fields, field)
 	}
 }
 
-func (p *parser) parseField() (st.Field, bool) {
-	id, ok := p.expectToken(lex.TOKEN_ID, true)
+var fieldsFirst = fieldFirst
+var fieldsFollow = lex.TOKEN_RBRACE
 
-	_, ok = p.eatUntilOneOf([]lex.TokenType{
+func (p *parser) parseFields() []st.Field {
+	fields := []st.Field{}
+	for {
+		switch p.currToken().Type {
+		case fieldsFirst:
+			fields = append(fields, p.parseField())
+		case fieldsFollow:
+			return fields
+		default:
+			p.errorUntil([]lex.TokenType{fieldsFirst, fieldsFollow}, []lex.TokenType{fieldsFollow})
+			return fields
+		}
+	}
+}
+
+var fieldFirst = lex.TOKEN_ID
+var fieldFollows = []lex.TokenType{
+	fieldsFollow,
+	fieldFirst,
+}
+
+func (p *parser) parseField() st.Field {
+	id := p.expect(lex.TOKEN_ID, []lex.TokenType{
 		lex.TOKEN_ID,
 		lex.TOKEN_LIST,
 		lex.TOKEN_LITERAL,
 		lex.TOKEN_OPTIONAL,
 		lex.TOKEN_SEPARATOR,
-	}, ok)
-
-	if !ok {
-		return st.Field{}, false
-	}
+	})
 
 	currToken := p.currToken()
-
 	if currToken.Type == lex.TOKEN_ID || currToken.Type == lex.TOKEN_LIST || currToken.Type == lex.TOKEN_LITERAL {
 		jsonName := p.parseJsonRename()
-		fieldType, ok := p.parseType()
-		separator, ok := p.expectToken(lex.TOKEN_SEPARATOR, ok)
+		fieldType := p.parseType()
+		separator := p.expect(lex.TOKEN_SEPARATOR, fieldFollows)
 		return st.Field{
 			FieldFull: &st.FieldFull{
 				Id:        id,
@@ -343,59 +265,76 @@ func (p *parser) parseField() (st.Field, bool) {
 				Type:      fieldType,
 				Separator: separator,
 			},
-		}, ok
+		}
 	}
 	if currToken.Type == lex.TOKEN_OPTIONAL || currToken.Type == lex.TOKEN_SEPARATOR {
 		fieldNullable := p.parseNullability()
-		separator, ok := p.expectToken(lex.TOKEN_SEPARATOR, true)
+		separator := p.expect(lex.TOKEN_SEPARATOR, fieldFollows)
 		return st.Field{
 			FieldShort: &st.FieldShort{
 				Id:        id,
 				Nullable:  fieldNullable,
 				Separator: separator,
 			},
-		}, ok
+		}
 	}
 	panic("Unreachable")
 }
 
-func (p *parser) parseTypeIdent() (st.TypeIdent, bool) {
-	id, ok := p.expectToken(lex.TOKEN_ID, true)
+var typeIdentFirst = lex.TOKEN_ID
+var typeIdentFollow = typeFollow
+
+func (p *parser) parseTypeIdent() st.TypeIdent {
+	id := p.expect(lex.TOKEN_ID, []lex.TokenType{
+		typeIdentFollow,
+		lex.TOKEN_OPTIONAL,
+	})
 	nullable := p.parseNullability()
 	return st.TypeIdent{
 		Id:       id,
 		Nullable: nullable,
-	}, ok
+	}
 }
 
-func (p *parser) parseList() (st.List, bool) {
-	brackets, ok := p.expectToken(lex.TOKEN_LIST, true)
-	nullable := p.parseNullability()
-	listType, ok := p.parseType()
+var listFirst = lex.TOKEN_LIST
+var listFollow = typeFollow
 
+func (p *parser) parseList() st.List {
+	brackets := p.expect(lex.TOKEN_LIST, append(typeFirsts, lex.TOKEN_OPTIONAL))
+	nullable := p.parseNullability()
+	listType := p.parseType()
 	return st.List{
 		Brackets: brackets,
 		Nullable: nullable,
 		Type:     listType,
-	}, ok
+	}
 }
 
-func (p *parser) parseType() (st.Type, bool) {
+var typeFirsts = []lex.TokenType{
+	typeIdentFirst,
+	listFirst,
+}
+var typeFollow = lex.TOKEN_SEPARATOR
+
+func (p *parser) parseType() st.Type {
 	switch p.currToken().Type {
 	case lex.TOKEN_ID:
-		typeIdent, ok := p.parseTypeIdent()
+		typeIdent := p.parseTypeIdent()
 		return st.Type{
 			TypeIdent: &typeIdent,
-		}, ok
+		}
 	case lex.TOKEN_LIST:
-		typeList, ok := p.parseList()
+		typeList := p.parseList()
 		return st.Type{
 			List: &typeList,
-		}, ok
+		}
 	default:
+		p.errorUntil(typeFirsts, []lex.TokenType{typeFollow})
+		return st.Type{}
 	}
-	return st.Type{}, false
 }
+
+var nullabilityFirst = lex.TOKEN_OPTIONAL
 
 func (p *parser) parseNullability() *lex.Token {
 	nullable, ok := p.optionalNextToken(lex.TOKEN_OPTIONAL)
@@ -404,6 +343,8 @@ func (p *parser) parseNullability() *lex.Token {
 	}
 	return nil
 }
+
+var jsonRenameFirst = lex.TOKEN_LITERAL
 
 func (p *parser) parseJsonRename() *lex.Token {
 	jsonRename := p.currToken()
