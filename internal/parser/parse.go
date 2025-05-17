@@ -2,7 +2,6 @@ package parser
 
 import (
 	"fmt"
-
 	"github.com/brahms116/between/internal/lex"
 	"github.com/brahms116/between/internal/st"
 )
@@ -278,7 +277,14 @@ func (p *parser) parseField() st.Field {
 			},
 		}
 	}
-	panic("Unreachable")
+	p.errorUntil([]lex.TokenType{
+		lex.TOKEN_ID,
+		lex.TOKEN_LIST,
+		lex.TOKEN_LITERAL,
+		lex.TOKEN_OPTIONAL,
+		lex.TOKEN_SEPARATOR,
+	}, fieldFollows)
+	return st.Field{}
 }
 
 var typeIdentFirst = lex.TOKEN_ID
