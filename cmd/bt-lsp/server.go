@@ -44,6 +44,15 @@ func handleRequest[T any, K any](s *Server, body []byte, handler func(body T) K)
 	})
 }
 
+func (s *Server) sendNotification(method string, params any) {
+	notification := RpcNotification[any]{
+		RPC:    JSON_RPC,
+		Method: method,
+		Params: params,
+	}
+	s.transport.write(notification)
+}
+
 func (s *Server) Start() {
 	s.logger.Println("Starting server")
 	for {
@@ -62,8 +71,8 @@ func (s *Server) Start() {
 			handleNotification(s, msg, s.handleDidOpenTextDocument)
 		case "textDocument/didChange":
 			handleNotification(s, msg, s.handleDidChangeTextDocument)
-    case "textDocument/semanticTokens/full":
-      handleRequest(s, msg, s.handleSemanticTokensFull)
+		case "textDocument/semanticTokens/full":
+			handleRequest(s, msg, s.handleSemanticTokensFull)
 		default:
 			s.logger.Println("Unknown method:", method)
 		}

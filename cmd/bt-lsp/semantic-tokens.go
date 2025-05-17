@@ -1,12 +1,11 @@
 package main
 
-import (
-	"github.com/brahms116/between/internal/parser"
-)
+import ()
 
 func (s *Server) handleSemanticTokensFull(params SemanticTokensParams) SemanticTokens {
-	tree, _ := parser.LexAndParse(s.state.documents[params.TextDocument.URI])
-	tokens := convertTreeToSemanticTokens(tree)
+	tokens := convertTreeToSemanticTokens(
+		s.state.documents[params.TextDocument.URI].syntaxTree,
+  )
 	s.logger.Printf("tokens: %v \n", tokens)
 	return SemanticTokens{
 		Data: tokens,
