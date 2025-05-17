@@ -18,8 +18,28 @@ const NUM_TYPE_STRING = "Num"
 const STR_TYPE_STRING = "Str"
 const OBJ_TYPE_STRING = "Obj"
 
-func UnexpectedTokenError(token lex.Token) error {
-	return fmt.Errorf("Unexpected token %s at %s", token.String(), token.Loc.Start.String())
+type UnexpectedTokenError struct {
+	Expected []lex.TokenType
+	Actual   lex.Token
+}
+
+func newUnexpectedTokenError(expected []lex.TokenType, actual lex.Token) UnexpectedTokenError {
+	return UnexpectedTokenError{
+		Expected: expected,
+		Actual:   actual,
+	}
+}
+
+func (e UnexpectedTokenError) Error() string {
+	expectedStr := ""
+	for i, t := range e.Expected {
+		if i > 0 {
+			expectedStr += " or "
+		}
+		expectedStr += t.String()
+	}
+
+	return fmt.Sprintf("Expected %s at %s, got %s", expectedStr, e.Actual.Loc.Start.String(), e.Actual.String())
 }
 
 func ExpectedTokenError(expected []lex.TokenType, token lex.Token) error {
@@ -32,10 +52,6 @@ func ExpectedTokenError(expected []lex.TokenType, token lex.Token) error {
 	}
 
 	return fmt.Errorf("Expected %s at %s, got %s", expectedStr, token.Loc.Start.String(), token.String())
-}
-
-func EOFError() error {
-	return fmt.Errorf("Unexpected end of file")
 }
 
 func LexAndParse(input string) ([]st.Definition, []error) {
