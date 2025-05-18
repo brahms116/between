@@ -126,6 +126,7 @@ func (p *parser) parseDefinitions() []st.Definition {
 var definitionFirsts = []lex.TokenType{
 	productFirst,
 	sumFirst,
+  sumStrFirst,
 }
 
 var definitionFollows = append(definitionFirsts, []lex.TokenType{
