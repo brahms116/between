@@ -1,22 +1,35 @@
 package main
 
-import (
-	"github.com/brahms116/between/internal/parser"
-	"github.com/brahms116/between/internal/st"
-)
+import "log"
+
+func (s *Server) addDocument(uri string, text string) {
+	s.state.addDocument(uri, text)
+	s.publishDocumentDiagnostics(uri)
+}
+
+func (s *Server) updateDocument(uri string, text string) {
+	s.state.updateDocument(uri, text)
+	s.publishDocumentDiagnostics(uri)
+}
+
+func (s *Server) onDocumentChanged(uri string) {
+	s.publishDocumentDiagnostics(uri)
+}
 
 type lspState struct {
+	logger    *log.Logger
 	documents map[string]documentState
 }
 
-func newLspState() *lspState {
+func newLspState(logger *log.Logger) *lspState {
 	return &lspState{
+		logger:    logger,
 		documents: make(map[string]documentState),
 	}
 }
 
 func (s *lspState) addDocument(uri string, text string) {
-	ds := newDocumentState(text)
+	ds := newDocumentState(text, s.logger)
 	s.documents[uri] = ds
 }
 
@@ -27,21 +40,4 @@ func (s *lspState) updateDocument(uri string, text string) {
 	} else {
 		panic("Document not found")
 	}
-}
-
-type documentState struct {
-	text       string
-	syntaxTree []st.Definition
-}
-
-func newDocumentState(text string) documentState {
-	ds := documentState{}
-	ds.updateText(text)
-	return ds
-}
-
-func (ds *documentState) updateText(text string) {
-	ds.text = text
-	tree, _ := parser.LexAndParse(text)
-	ds.syntaxTree = tree
 }

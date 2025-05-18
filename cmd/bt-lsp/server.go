@@ -17,7 +17,7 @@ func newServer(transport *transport, logger *log.Logger) *Server {
 	return &Server{
 		logger:    logger,
 		transport: transport,
-		state:     newLspState(),
+		state:     newLspState(logger),
 	}
 }
 

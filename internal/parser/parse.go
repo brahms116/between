@@ -42,16 +42,16 @@ func (e UnexpectedTokenError) Error() string {
 	return fmt.Sprintf("Expected %s at %s, got %s", expectedStr, e.Actual.Loc.Start.String(), e.Actual.String())
 }
 
-func ExpectedTokenError(expected []lex.TokenType, token lex.Token) error {
+func (e UnexpectedTokenError) LspMessage() string {
 	expectedStr := ""
-	for i, t := range expected {
+	for i, t := range e.Expected {
 		if i > 0 {
 			expectedStr += " or "
 		}
 		expectedStr += t.String()
 	}
 
-	return fmt.Errorf("Expected %s at %s, got %s", expectedStr, token.Loc.Start.String(), token.String())
+	return fmt.Sprintf("Expected %s got %s", expectedStr, e.Actual.String())
 }
 
 func LexAndParse(input string) ([]st.Definition, []error) {
@@ -85,7 +85,7 @@ func (p *parser) expect(tokenType lex.TokenType, follow []lex.TokenType) lex.Tok
 
 func (p *parser) errorUntil(expectedTokens []lex.TokenType, follow []lex.TokenType) {
 	if !p.isEofError {
-		p.appendErr(ExpectedTokenError(expectedTokens, p.currToken()))
+		p.appendErr(newUnexpectedTokenError(expectedTokens, p.currToken()))
 	}
 
 outer:
