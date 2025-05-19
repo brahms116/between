@@ -1,6 +1,9 @@
 package main
 
-import "github.com/brahms116/between/internal/parser"
+import (
+	"github.com/brahms116/between/internal/lex"
+	"github.com/brahms116/between/internal/parser"
+)
 
 func parseAndLexErrorsToDiagnostics(errs []error) []Diagnostic {
 	diagnostics := make([]Diagnostic, 0, len(errs))
@@ -20,6 +23,16 @@ func parseAndLexErrorToDiagnostic(err error) *Diagnostic {
 			Severity: &DiagnosticSeverityError,
 			Message:  e.LspMessage(),
 		}
+  case lex.UnexpectedCharError:
+    pt := lexPointToLspPosition(e.Point)
+    return &Diagnostic{
+      Severity: &DiagnosticSeverityError,
+      Message:  e.LspMessage(),
+      Range: Range{
+        Start: pt,
+        End:   pt,
+      },
+    }
 	default:
 		return nil
 	}

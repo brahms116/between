@@ -21,6 +21,33 @@ const (
 	TOKEN_EOF
 )
 
+type UnexpectedCharError struct {
+	Expected *string
+	Actual   string
+	Point    Point
+}
+
+func (e UnexpectedCharError) Error() string {
+	return e.LspMessage() + fmt.Sprintf(" at %s", e.Point.String())
+}
+
+func (e UnexpectedCharError) LspMessage() string {
+	base := fmt.Sprintf("Unexpected char %s", e.Actual)
+
+	if e.Expected != nil {
+		base += fmt.Sprintf(", expected %s", *e.Expected)
+	}
+	return base
+}
+
+func newUnexpectedCharError(expected *string, actual string, point Point) UnexpectedCharError {
+	return UnexpectedCharError{
+		Expected: expected,
+		Actual:   actual,
+		Point:    point,
+	}
+}
+
 var stringToToken map[string]TokenType = map[string]TokenType{
 	"prod":   TOKEN_PRODUCT,
 	"sum":    TOKEN_SUM,
@@ -106,11 +133,13 @@ func (l *lexer) Lex() {
 			{
 				currChar = l.next()
 				if currChar == nil {
-					l.err(fmt.Errorf("Unexpected EOF, expected ']' at %d", l.currPos))
+					expected := "]"
+					l.err(newUnexpectedCharError(&expected, "EOF", l.currPt))
 					continue
 				}
 				if *currChar != ']' {
-					l.err(fmt.Errorf("Unexpected char %s, expected ']' at %d", string(*currChar), l.currPos))
+					expected := "]"
+					l.err(newUnexpectedCharError(&expected, string(*currChar), l.currPt))
 					continue
 				}
 				l.acceptToken(TOKEN_LIST)
@@ -126,7 +155,7 @@ func (l *lexer) Lex() {
 			l.lexAlphaNum()
 			continue
 		}
-		l.err(fmt.Errorf("Unexpected char %s at %d", string(*currChar), l.currPos))
+		l.err(newUnexpectedCharError(nil, string(*currChar), l.currPt))
 	}
 
 	l.acceptToken(TOKEN_EOF)
@@ -138,7 +167,8 @@ func (l *lexer) lexLiteral() {
 	})
 	next := l.next()
 	if next == nil {
-		l.err(fmt.Errorf("Unexpected EOF, expected '\"' at %d", l.currPos))
+		expected := "\""
+		l.err(newUnexpectedCharError(&expected, "EOF", l.currPt))
 	}
 	str := l.currString()
 	l.acceptTokenWithValue(TOKEN_LITERAL, str[1:len(str)-1])
