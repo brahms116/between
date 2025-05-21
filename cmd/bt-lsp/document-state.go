@@ -5,6 +5,7 @@ import (
 
 	"github.com/brahms116/between/internal/parser"
 	"github.com/brahms116/between/internal/st"
+	"github.com/brahms116/between/internal/translate"
 )
 
 type documentState struct {
@@ -25,5 +26,10 @@ func (ds *documentState) updateText(text string) {
 	ds.text = text
 	tree, errs := parser.LexAndParse(text)
 	ds.syntaxTree = tree
-	ds.diagnostics = parseAndLexErrorsToDiagnostics(errs)
+	if len(errs) > 0 {
+		ds.diagnostics = errorsToDiagnostics(errs)
+		return
+	}
+	_, _, errs = translate.Translate(tree)
+	ds.diagnostics = errorsToDiagnostics(errs)
 }
