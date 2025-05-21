@@ -50,10 +50,10 @@ func main() {
 		log.Panic(err)
 	}
 
-	st, err := parser.LexAndParse(string(input))
-	definitions, primitives ,err := translate.Translate(st)
-	if err != nil {
-		log.Panic(err)
+	st, errs := parser.LexAndParse(string(input))
+	definitions, primitives, errs := translate.Translate(st)
+	if len(errs) > 0 {
+		log.Panic(errs[0])
 	}
 
 	var output string
